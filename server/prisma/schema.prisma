@@ -1,0 +1,265 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ==========================================
+// ENUMS
+// ==========================================
+
+enum UserRole {
+  student
+  officer
+  controller
+  admin
+}
+
+enum ClearanceStatus {
+  draft
+  applied
+  in_progress
+  correction_required
+  completed
+}
+
+enum ReviewStatus {
+  pending
+  approved
+  rejected
+  correction_required
+  not_applicable
+}
+
+enum DegreeStatus {
+  application_started
+  documents_uploaded
+  controller_review
+  degree_processing
+  degree_ready
+  degree_collected
+  completed
+}
+
+enum DocType {
+  CNIC
+  PHOTO
+  SSC_DMC
+  SSC_CERT
+  HSSC_DMC
+  HSSC_CERT
+  FEE_SLIP
+  VERIFICATION_SLIP
+  INTERNSHIP
+  CLEARANCE_CERT
+}
+
+enum VerifyStatus {
+  pending
+  verified
+  rejected
+}
+
+enum MessageRole {
+  user
+  assistant
+}
+
+// ==========================================
+// MODELS
+// ==========================================
+
+model Department {
+  department_id Int       @id @default(autoincrement())
+  name          String    @db.VarChar(100)
+  code          String    @unique @db.VarChar(10)
+  is_active     Boolean   @default(true)
+
+  // Relations
+  users             User[]
+  departmentReviews DepartmentReview[]
+
+  @@map("departments")
+}
+
+model User {
+  user_id         Int       @id @default(autoincrement())
+  department_id   Int?
+  full_name       String    @db.VarChar(100)
+  email           String    @unique @db.VarChar(150)
+  password_hash   String    @db.VarChar(255)
+  role            UserRole  @default(student)
+  registration_no String?   @unique @db.VarChar(30)
+  cnic            String?   @unique @db.VarChar(15)
+  phone           String?   @db.VarChar(20)
+  is_active       Boolean   @default(true)
+  created_at      DateTime  @default(now()) @db.Timestamptz
+
+  // Relations
+  department         Department?         @relation(fields: [department_id], references: [department_id])
+  clearanceRequests  ClearanceRequest[]
+  departmentReviews  DepartmentReview[]
+  degreeApplications DegreeApplication[]
+  receipts           Receipt[]
+  notifications      Notification[]
+  activityLogs       ActivityLog[]
+  chatSessions       ChatSession[]
+
+  @@map("users")
+}
+
+model ClearanceRequest {
+  clearance_id             Int             @id @default(autoincrement())
+  student_id               Int
+  status                   ClearanceStatus @default(draft)
+  certificate_uri          String?         @db.Text
+  certificate_generated_at DateTime?       @db.Timestamptz
+  submitted_at             DateTime?       @db.Timestamptz
+  completed_at             DateTime?       @db.Timestamptz
+
+  // Relations
+  student           User               @relation(fields: [student_id], references: [user_id])
+  departmentReviews DepartmentReview[]
+  degreeApplication DegreeApplication?
+
+  @@map("clearance_requests")
+}
+
+model DepartmentReview {
+  review_id     Int          @id @default(autoincrement())
+  clearance_id  Int
+  department_id Int
+  officer_id    Int?
+  status        ReviewStatus @default(pending)
+  remarks       String?      @db.Text
+  reviewed_at   DateTime?    @db.Timestamptz
+
+  // Relations
+  clearanceRequest ClearanceRequest @relation(fields: [clearance_id], references: [clearance_id], onDelete: Cascade)
+  department       Department       @relation(fields: [department_id], references: [department_id])
+  officer          User?            @relation(fields: [officer_id], references: [user_id])
+
+  // Composite unique key: exactly 1 review per department per clearance request
+  @@unique([clearance_id, department_id])
+  @@map("department_reviews")
+}
+
+model DegreeApplication {
+  degree_app_id Int          @id @default(autoincrement())
+  student_id    Int
+  clearance_id  Int          @unique
+  status        DegreeStatus @default(application_started)
+  approved_at   DateTime?    @db.Timestamptz
+  ready_at      DateTime?    @db.Timestamptz
+  collected_at  DateTime?    @db.Timestamptz
+  created_at    DateTime     @default(now()) @db.Timestamptz
+  updated_at    DateTime     @updatedAt @db.Timestamptz
+
+  // Relations
+  student          User             @relation(fields: [student_id], references: [user_id])
+  clearanceRequest ClearanceRequest @relation(fields: [clearance_id], references: [clearance_id])
+  documents        Document[]
+  receipt          Receipt?
+
+  @@map("degree_applications")
+}
+
+model Document {
+  document_id         Int          @id @default(autoincrement())
+  degree_app_id       Int
+  document_type       DocType
+  file_url            String       @db.Text
+  verification_status VerifyStatus @default(pending)
+  remarks             String?      @db.Text
+  uploaded_at         DateTime     @default(now()) @db.Timestamptz
+
+  // Relations
+  degreeApplication DegreeApplication @relation(fields: [degree_app_id], references: [degree_app_id], onDelete: Cascade)
+
+  @@map("documents")
+}
+
+model Receipt {
+  receipt_id      Int      @id @default(autoincrement())
+  degree_app_id   Int      @unique
+  receipt_number  String   @unique @db.VarChar(30)
+  pdf_url         String   @db.Text
+  collection_date DateTime @db.Date
+  generated_by    Int
+  generated_at    DateTime @default(now()) @db.Timestamptz
+
+  // Relations
+  degreeApplication DegreeApplication @relation(fields: [degree_app_id], references: [degree_app_id])
+  generator         User              @relation(fields: [generated_by], references: [user_id])
+
+  @@map("receipts")
+}
+
+model Notification {
+  notification_id Int      @id @default(autoincrement())
+  user_id         Int
+  title           String   @db.VarChar(150)
+  message         String   @db.Text
+  is_read         Boolean  @default(false)
+  created_at      DateTime @default(now()) @db.Timestamptz
+
+  // Relations
+  user User @relation(fields: [user_id], references: [user_id], onDelete: Cascade)
+
+  @@map("notifications")
+}
+
+model ActivityLog {
+  log_id      Int      @id @default(autoincrement())
+  user_id     Int?
+  action      String   @db.VarChar(100)
+  entity_type String   @db.VarChar(50)
+  entity_id   Int?
+  description String?  @db.Text
+  created_at  DateTime @default(now()) @db.Timestamptz
+
+  // Relations
+  user User? @relation(fields: [user_id], references: [user_id])
+
+  @@map("activity_logs")
+}
+
+model ChatSession {
+  session_id Int       @id @default(autoincrement())
+  user_id    Int
+  started_at DateTime  @default(now()) @db.Timestamptz
+  ended_at   DateTime? @db.Timestamptz
+
+  // Relations
+  user     User          @relation(fields: [user_id], references: [user_id], onDelete: Cascade)
+  messages ChatMessage[]
+
+  @@map("chat_sessions")
+}
+
+model ChatMessage {
+  message_id Int         @id @default(autoincrement())
+  session_id Int
+  role       MessageRole
+  content    String      @db.Text
+  created_at DateTime    @default(now()) @db.Timestamptz
+
+  // Relations
+  session ChatSession @relation(fields: [session_id], references: [session_id], onDelete: Cascade)
+
+  @@map("chat_messages")
+}
+
+model KnowledgeBase {
+  kb_id           Int      @id @default(autoincrement())
+  title           String   @db.VarChar(200)
+  category        String   @db.VarChar(50)
+  content         String   @db.Text
+  source_document String?  @db.VarChar(200)
+  embedding       String?  @db.Text
+
+  @@map("knowledge_base")
+}

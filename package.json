@@ -1,0 +1,29 @@
+{
+  "name": "degree-clearance-management-system",
+  "version": "1.0.0",
+  "description": "AI-Powered Degree Issuance and Clearance Management System with parallel departmental verification, automated document processing, PDF generation, and RAG-based AI assistant.",
+  "main": "index.js",
+  "directories": {
+    "doc": "docs"
+  },
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "dev": "concurrently \"npm run dev --prefix server\" \"npm run dev --prefix client\"",
+    "dev:server": "npm run dev --prefix server",
+    "dev:client": "npm run dev --prefix client"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/MuhammadYasir85a/degree-clearance-management-system.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/MuhammadYasir85a/degree-clearance-management-system/issues"
+  },
+  "homepage": "https://github.com/MuhammadYasir85a/degree-clearance-management-system#readme",
+  "dependencies": {
+    "concurrently": "^10.0.6"
+  }
+}

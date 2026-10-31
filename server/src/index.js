@@ -4,10 +4,18 @@ import dotenv from 'dotenv';
 import cookieParser from 'cookie-parser';
 import morgan from 'morgan';
 
+import authRoutes from './routes/auth.routes.js';
+import adminRoutes from './routes/admin.routes.js';
+
+
+
 dotenv.config();
 
 const app = express();
 const PORT = process.env.PORT || 5000;
+
+// Mount route:
+app.use('/api/admin', adminRoutes);
 
 app.use(morgan('dev'));
 app.use(cors({
@@ -17,6 +25,7 @@ app.use(cors({
 app.use(express.json());
 app.use(cookieParser());
 
+// Health Check
 app.get('/api/health', (req, res) => {
   res.json({
     status: 'ok',
@@ -24,6 +33,9 @@ app.get('/api/health', (req, res) => {
     timestamp: new Date().toISOString(),
   });
 });
+
+// Mounting Auth API Routes
+app.use('/api/auth', authRoutes);
 
 app.listen(PORT, () => {
   console.log(`Server running on http://localhost:${PORT}`);

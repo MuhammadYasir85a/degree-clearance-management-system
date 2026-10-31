@@ -105,12 +105,13 @@ model EligibleStudent {
   email           String   @unique @db.VarChar(150)
   full_name       String   @db.VarChar(100)
   program_id      Int
-  batch_year      Int?     // e.g. 2021, 2022
-  is_registered   Boolean  @default(false) // true when student creates account
+  batch_year      Int?     
+  is_registered   Boolean  @default(false) 
   created_at      DateTime @default(now()) @db.Timestamptz
 
   // Relations
-  program AcademicProgram @relation(fields: [program_id], references: [program_id])
+  program             AcademicProgram      @relation(fields: [program_id], references: [program_id])
+  registrationRequest RegistrationRequest? // NEW RELATION ADDED HERE
 
   @@map("eligible_students")
 }
@@ -294,4 +295,21 @@ model KnowledgeBase {
   embedding       String?  @db.Text
 
   @@map("knowledge_base")
+}
+
+model RegistrationRequest {
+  request_id    Int      @id @default(autoincrement())
+  eligible_id   Int      @unique // Only one active request per student
+  cnic          String   @db.VarChar(15)
+  phone         String?  @db.VarChar(20)
+  password_hash String   @db.VarChar(255)
+  status        String   @default("pending") // pending, approved, rejected
+  admin_remarks String?  @db.Text
+  created_at    DateTime @default(now()) @db.Timestamptz
+  reviewed_at   DateTime? @db.Timestamptz
+
+  // Relations
+  eligibleStudent EligibleStudent @relation(fields: [eligible_id], references: [eligible_id], onDelete: Cascade)
+
+  @@map("registration_requests")
 }

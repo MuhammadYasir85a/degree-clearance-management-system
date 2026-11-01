@@ -298,15 +298,18 @@ model KnowledgeBase {
 }
 
 model RegistrationRequest {
-  request_id    Int      @id @default(autoincrement())
-  eligible_id   Int      @unique // Only one active request per student
-  cnic          String   @db.VarChar(15)
-  phone         String?  @db.VarChar(20)
-  password_hash String   @db.VarChar(255)
-  status        String   @default("pending") // pending, approved, rejected
-  admin_remarks String?  @db.Text
-  created_at    DateTime @default(now()) @db.Timestamptz
-  reviewed_at   DateTime? @db.Timestamptz
+  request_id      Int       @id @default(autoincrement())
+  eligible_id     Int       @unique
+  cnic            String    @db.VarChar(15)
+  phone           String?   @db.VarChar(20)
+  password_hash   String    @db.VarChar(255)
+  status          String    @default("pending") // pending, approved, rejected
+  admin_remarks   String?   @db.Text
+  otp_code        String?   @db.VarChar(6)
+  otp_expires_at  DateTime? @db.Timestamptz
+  is_otp_verified Boolean   @default(false)
+  created_at      DateTime  @default(now()) @db.Timestamptz
+  reviewed_at     DateTime? @db.Timestamptz
 
   // Relations
   eligibleStudent EligibleStudent @relation(fields: [eligible_id], references: [eligible_id], onDelete: Cascade)

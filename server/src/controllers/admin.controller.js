@@ -1,4 +1,6 @@
 import prisma, { withDbRetry } from '../config/prisma.js';
+import csv from 'csv-parser';
+import { Readable } from 'stream';
 
 // @desc    Get all pending registration requests
 // @route   GET /api/admin/registration-requests
@@ -38,25 +40,31 @@ export const approveRequest = async (req, res) => {
     );
 
     if (!request || request.status !== 'pending') {
-      return res.status(404).json({ success: false, message: 'Pending request not found.' });
+      return res.status(404).json({
+        success: false,
+        message: 'Pending request not found.',
+      });
     }
 
-    // Transaction: Approve Request -> Mark Eligible -> Create User -> Notify User
+    if (!request.is_otp_verified) {
+      return res.status(400).json({
+        success: false,
+        message: 'Student has not verified OTP yet. Cannot approve.',
+      });
+    }
+
     await withDbRetry(() =>
       prisma.$transaction(async (tx) => {
-        // 1. Update Request Status
         await tx.registrationRequest.update({
           where: { request_id: request.request_id },
           data: { status: 'approved', reviewed_at: new Date() },
         });
 
-        // 2. Mark Eligible Student as Registered
         await tx.eligibleStudent.update({
           where: { eligible_id: request.eligible_id },
           data: { is_registered: true },
         });
 
-        // 3. Create the actual User Account
         const user = await tx.user.create({
           data: {
             full_name: request.eligibleStudent.full_name,
@@ -70,18 +78,20 @@ export const approveRequest = async (req, res) => {
           },
         });
 
-        // 4. Create Welcome Notification for the Student
         await tx.notification.create({
           data: {
             user_id: user.user_id,
             title: 'Account Approved',
-            message: 'Your account has been approved by the Admin. Welcome to the system!',
+            message: 'Your account has been approved by the Admin. You can now login.',
           },
         });
       })
     );
 
-    res.status(200).json({ success: true, message: 'Student account approved and created successfully.' });
+    res.status(200).json({
+      success: true,
+      message: 'Student account approved and created successfully.',
+    });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
   }
@@ -115,6 +125,77 @@ export const rejectRequest = async (req, res) => {
     );
 
     res.status(200).json({ success: true, message: 'Registration request rejected.' });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+// @desc    Admin uploads CSV of eligible graduating students
+// @route   POST /api/admin/import-eligible-students
+// @access  Private (Admin)
+export const importEligibleStudents = async (req, res) => {
+  try {
+    if (!req.file) {
+      return res.status(400).json({
+        success: false,
+        message: 'Please upload a CSV file.',
+      });
+    }
+
+    const results = [];
+    const stream = Readable.from(req.file.buffer.toString());
+
+    stream
+      .pipe(csv())
+      .on('data', (data) => results.push(data))
+      .on('end', async () => {
+        let importedCount = 0;
+
+        for (const row of results) {
+          const regNo = row.registration_no?.trim();
+          const email = row.email?.trim().toLowerCase();
+          const fullName = row.full_name?.trim();
+          const programCode = row.program_code?.trim();
+          const batchYear = row.batch_year ? parseInt(row.batch_year) : null;
+
+          if (!regNo || !email || !fullName || !programCode) continue;
+
+          const program = await withDbRetry(() =>
+            prisma.academicProgram.findUnique({
+              where: { code: programCode },
+            })
+          );
+
+          if (!program) continue;
+
+          await withDbRetry(() =>
+            prisma.eligibleStudent.upsert({
+              where: { registration_no: regNo },
+              update: {
+                email,
+                full_name: fullName,
+                program_id: program.program_id,
+                batch_year: batchYear,
+                is_registered: false,
+              },
+              create: {
+                registration_no: regNo,
+                email,
+                full_name: fullName,
+                program_id: program.program_id,
+                batch_year: batchYear,
+              },
+            })
+          );
+
+          importedCount++;
+        }
+
+        res.status(200).json({
+          success: true,
+          message: `CSV import completed successfully. ${importedCount} eligible students loaded.`,
+        });
+      });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
   }

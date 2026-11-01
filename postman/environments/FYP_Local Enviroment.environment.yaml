@@ -1,0 +1,10 @@
+name: FYP_Local Enviroment
+values:
+  - key: BASE_URL
+    value: ''
+  - key: ''
+    value: ''
+  - key: admin_token
+    value: ''
+  - key: request_id
+    value: ''

@@ -1,0 +1,22 @@
+$kind: http-request
+url: "{{base_url}}/clearance/admin/all?page=1&limit=5"
+method: GET
+headers:
+  Authorization: Bearer {{admin_token}}
+queryParams:
+  page: "1"
+  limit: "5"
+scripts:
+  - type: afterResponse
+    code: |-
+      const res = pm.response.json();
+      if (res.success && res.data && res.data.length > 0) {
+          pm.environment.set('clearance_id', res.data[0].clearance_id);
+          pm.globals.set('clearance_id', res.data[0].clearance_id);
+      }
+      pm.test('Fetched all clearance requests', () => {
+          pm.expect(res.success).to.be.true;
+          pm.expect(res.pagination).to.have.property('total');
+      });
+    language: text/javascript
+order: 3000

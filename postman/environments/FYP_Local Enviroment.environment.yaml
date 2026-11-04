@@ -6,5 +6,9 @@ values:
     value: ''
   - key: admin_token
     value: ''
-  - key: request_id
+  - key: student_token
+    value: ''
+  - key: clearance_id
+    value: ''
+  - key: notification_id
     value: ''

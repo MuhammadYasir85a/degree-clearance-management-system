@@ -1,0 +1,15 @@
+$kind: http-request
+url: "{{base_url}}/notifications/{{notification_id}}/read"
+method: PUT
+headers:
+  Authorization: Bearer {{student_token}}
+scripts:
+  - type: afterResponse
+    code: |-
+      const res = pm.response.json();
+      pm.test('Notification marked read', () => {
+          pm.expect(res.success).to.be.true;
+          pm.expect(res.data.is_read).to.be.true;
+      });
+    language: text/javascript
+order: 7000

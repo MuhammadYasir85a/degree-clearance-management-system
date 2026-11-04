@@ -1,0 +1,20 @@
+$kind: http-request
+url: "{{base_url}}/clearance/apply"
+method: POST
+headers:
+  Content-Type: application/json
+  Authorization: Bearer {{student_token}}
+scripts:
+  - type: afterResponse
+    code: |-
+      const res = pm.response.json();
+      if (res.success && res.data) {
+          pm.collectionVariables.set('clearance_id', res.data.clearance_id);
+      }
+      pm.test('Clearance applied', () => {
+          pm.expect(res.success).to.be.true;
+          pm.expect(res.data.status).to.eql('in_progress');
+          pm.expect(res.data.departments_count).to.eql(8);
+      });
+    language: text/javascript
+order: 5000

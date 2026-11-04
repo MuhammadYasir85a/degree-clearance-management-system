@@ -1,2 +1,14 @@
 name: Globals
-values: []
+values:
+  - key: admin_token
+    value: ''
+    enabled: true
+  - key: student_token
+    value: ''
+    enabled: true
+  - key: notification_id
+    value: ''
+    enabled: true
+  - key: clearance_id
+    value: ''
+    enabled: true

@@ -1,0 +1,26 @@
+$kind: http-request
+url: "{{base_url}}/clearance/my-status"
+method: GET
+headers:
+  Authorization: Bearer {{student_token}}
+scripts:
+  - type: afterResponse
+    code: |-
+      const res = pm.response.json();
+      pm.test('Overall status is correction_required', () => {
+          pm.expect(res.data.status).to.eql('correction_required');
+      });
+      pm.test('Library still approved (LOCKED)', () => {
+          const lib = res.data.reviews.find(r => r.department.code === 'LIB');
+          pm.expect(lib.status).to.eql('approved');
+      });
+      pm.test('Accounts still approved (LOCKED)', () => {
+          const acc = res.data.reviews.find(r => r.department.code === 'ACC');
+          pm.expect(acc.status).to.eql('approved');
+      });
+      pm.test('Hostel is correction_required', () => {
+          const hst = res.data.reviews.find(r => r.department.code === 'HST');
+          pm.expect(hst.status).to.eql('correction_required');
+      });
+    language: text/javascript
+order: 13000

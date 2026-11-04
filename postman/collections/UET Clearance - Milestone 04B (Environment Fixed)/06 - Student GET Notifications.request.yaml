@@ -1,0 +1,18 @@
+$kind: http-request
+url: "{{base_url}}/notifications"
+method: GET
+headers:
+  Authorization: Bearer {{student_token}}
+scripts:
+  - type: afterResponse
+    code: |-
+      const res = pm.response.json();
+      if (res.success && res.data && res.data.length > 0) {
+          pm.environment.set('notification_id', res.data[0].notification_id);
+          pm.globals.set('notification_id', res.data[0].notification_id);
+      }
+      pm.test('Notifications list fetched', () => {
+          pm.expect(res.success).to.be.true;
+      });
+    language: text/javascript
+order: 6000

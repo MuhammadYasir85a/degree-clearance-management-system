@@ -1,0 +1,16 @@
+$kind: http-request
+url: "{{base_url}}/clearance/officer/pending"
+method: GET
+headers:
+  Authorization: Bearer {{officer_lib_token}}
+scripts:
+  - type: afterResponse
+    code: |-
+      const res = pm.response.json();
+      pm.test('Library pending queue', () => {
+          pm.expect(res.success).to.be.true;
+          pm.expect(res.count).to.eql(1);
+          pm.expect(res.data[0].student.full_name).to.eql('Muhammad Awais');
+      });
+    language: text/javascript
+order: 8000

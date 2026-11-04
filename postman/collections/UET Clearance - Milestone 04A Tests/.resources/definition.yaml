@@ -1,0 +1,12 @@
+$kind: collection
+description: ""
+variables:
+  base_url: http://localhost:5000/api
+  student_token: ""
+  officer_lib_token: ""
+  officer_acc_token: ""
+  officer_hst_token: ""
+  clearance_id: ""
+  review_lib_id: ""
+  review_acc_id: ""
+  review_hst_id: ""

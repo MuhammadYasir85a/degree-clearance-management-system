@@ -1,0 +1,27 @@
+$kind: http-request
+url: "{{base_url}}/auth/login"
+method: POST
+headers:
+  Content-Type: application/json
+body:
+  type: text
+  content: |-
+    {
+      "email": "admin@university.edu.pk",
+      "password": "admin123"
+    }
+scripts:
+  - type: afterResponse
+    code: |-
+      const res = pm.response.json();
+      const token = res.token || (res.data && res.data.token) || res.accessToken;
+      if (token) {
+          pm.environment.set('admin_token', token);
+          pm.globals.set('admin_token', token);
+          console.log('✅ Admin Token Saved to Environment & Globals!');
+      }
+      pm.test('Admin Login OK', () => {
+          pm.expect(res.success).to.be.true;
+      });
+    language: text/javascript
+order: 1000

@@ -1,0 +1,20 @@
+$kind: http-request
+url: "{{base_url}}/clearance/officer/review/{{review_lib_id}}"
+method: PUT
+headers:
+  Content-Type: application/json
+  Authorization: Bearer {{officer_lib_token}}
+body:
+  type: text
+  content: |-
+    {
+      "status": "approved",
+      "remarks": "No library dues pending."
+    }
+scripts:
+  - type: afterResponse
+    code: |-
+      const res = pm.response.json();
+      pm.test('Library approved', () => pm.expect(res.success).to.be.true);
+    language: text/javascript
+order: 9000

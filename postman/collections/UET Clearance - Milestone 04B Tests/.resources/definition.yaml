@@ -1,0 +1,8 @@
+$kind: collection
+description: ""
+variables:
+  base_url: http://localhost:5000/api
+  admin_token: ""
+  student_token: ""
+  clearance_id: ""
+  notification_id: ""

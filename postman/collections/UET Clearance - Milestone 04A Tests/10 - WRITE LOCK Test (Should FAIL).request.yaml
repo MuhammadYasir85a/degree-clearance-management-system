@@ -1,0 +1,23 @@
+$kind: http-request
+url: "{{base_url}}/clearance/officer/review/{{review_lib_id}}"
+method: PUT
+headers:
+  Content-Type: application/json
+  Authorization: Bearer {{officer_lib_token}}
+body:
+  type: text
+  content: |-
+    {
+      "status": "correction_required",
+      "remarks": "Trying to change locked review."
+    }
+scripts:
+  - type: afterResponse
+    code: |-
+      const res = pm.response.json();
+      pm.test('Write lock enforced', () => {
+          pm.expect(res.success).to.be.false;
+          pm.expect(res.message).to.include('locked');
+      });
+    language: text/javascript
+order: 10000

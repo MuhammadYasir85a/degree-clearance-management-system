@@ -1,0 +1,6 @@
+$kind: collection
+description: ""
+variables:
+  base_url: http://localhost:5000/api
+  clearance_id: "1"
+  notification_id: "1"

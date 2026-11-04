@@ -1,0 +1,20 @@
+$kind: http-request
+url: "{{base_url}}/clearance/officer/review/{{review_hst_id}}"
+method: PUT
+headers:
+  Content-Type: application/json
+  Authorization: Bearer {{officer_hst_token}}
+body:
+  type: text
+  content: |-
+    {
+      "status": "correction_required",
+      "remarks": "Room not vacated yet."
+    }
+scripts:
+  - type: afterResponse
+    code: |-
+      const res = pm.response.json();
+      pm.test('Correction requested', () => pm.expect(res.success).to.be.true);
+    language: text/javascript
+order: 12000

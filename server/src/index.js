@@ -3,6 +3,8 @@ import cors from 'cors';
 import dotenv from 'dotenv';
 import cookieParser from 'cookie-parser';
 import morgan from 'morgan';
+import clearanceRoutes from './routes/clearance.routes.js';
+import notificationRoutes from './routes/notification.routes.js';
 
 import authRoutes from './routes/auth.routes.js';
 import adminRoutes from './routes/admin.routes.js';
@@ -39,3 +41,10 @@ app.use('/api/admin', adminRoutes);
 app.listen(PORT, () => {
   console.log(`🚀 Server running on http://localhost:${PORT}`);
 });
+
+// ... inside your app setup, after other app.use() calls:
+app.use('/api/clearance', clearanceRoutes);
+
+// ... existing middleware and route mounts ...
+app.use('/api/clearance', clearanceRoutes);
+app.use('/api/notifications', notificationRoutes);

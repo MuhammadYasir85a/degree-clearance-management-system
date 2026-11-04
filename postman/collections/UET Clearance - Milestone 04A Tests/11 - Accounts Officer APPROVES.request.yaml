@@ -1,0 +1,20 @@
+$kind: http-request
+url: "{{base_url}}/clearance/officer/review/{{review_acc_id}}"
+method: PUT
+headers:
+  Content-Type: application/json
+  Authorization: Bearer {{officer_acc_token}}
+body:
+  type: text
+  content: |-
+    {
+      "status": "approved",
+      "remarks": "No fee dues."
+    }
+scripts:
+  - type: afterResponse
+    code: |-
+      const res = pm.response.json();
+      pm.test('Accounts approved', () => pm.expect(res.success).to.be.true);
+    language: text/javascript
+order: 11000

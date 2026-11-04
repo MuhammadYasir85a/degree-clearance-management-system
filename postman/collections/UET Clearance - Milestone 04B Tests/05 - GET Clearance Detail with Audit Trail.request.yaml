@@ -1,0 +1,16 @@
+$kind: http-request
+url: "{{base_url}}/clearance/{{clearance_id}}"
+method: GET
+headers:
+  Authorization: Bearer {{admin_token}}
+scripts:
+  - type: afterResponse
+    code: |-
+      const res = pm.response.json();
+      pm.test('Clearance details + audit trail fetched', () => {
+          pm.expect(res.success).to.be.true;
+          pm.expect(res.data).to.have.property('audit_trail');
+          pm.expect(res.data.reviews.length).to.be.above(0);
+      });
+    language: text/javascript
+order: 5000

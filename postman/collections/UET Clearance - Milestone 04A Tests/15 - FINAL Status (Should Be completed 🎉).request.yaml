@@ -1,0 +1,23 @@
+$kind: http-request
+url: "{{base_url}}/clearance/my-status"
+method: GET
+headers:
+  Authorization: Bearer {{student_token}}
+scripts:
+  - type: afterResponse
+    code: |-
+      const res = pm.response.json();
+      pm.test('🎉 Clearance COMPLETED', () => {
+          pm.expect(res.data.status).to.eql('completed');
+      });
+      pm.test('Progress is 100%', () => {
+          pm.expect(res.data.progress.percentage).to.eql(100);
+      });
+      pm.test('All 8 reviews done', () => {
+          const allDone = res.data.reviews.every(
+              r => r.status === 'approved' || r.status === 'not_applicable'
+          );
+          pm.expect(allDone).to.be.true;
+      });
+    language: text/javascript
+order: 15000

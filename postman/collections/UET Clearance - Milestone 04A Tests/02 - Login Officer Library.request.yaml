@@ -1,0 +1,22 @@
+$kind: http-request
+url: "{{base_url}}/auth/login"
+method: POST
+headers:
+  Content-Type: application/json
+body:
+  type: text
+  content: |-
+    {
+      "email": "officer.lib@university.edu.pk",
+      "password": "officer123"
+    }
+scripts:
+  - type: afterResponse
+    code: |-
+      const res = pm.response.json();
+      if (res.success && res.token) {
+          pm.collectionVariables.set('officer_lib_token', res.token);
+      }
+      pm.test('Library Officer login OK', () => pm.expect(res.success).to.be.true);
+    language: text/javascript
+order: 2000

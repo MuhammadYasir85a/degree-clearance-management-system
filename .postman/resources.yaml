@@ -2,6 +2,14 @@
 workspace:
   id: 2bb60d57-6aae-491a-86ef-3533665d54dd
 
+# Each entry here maps a local resource to one or more corresponding objects in Postman Cloud
+
+cloudResources:
+  collections:
+    ../postman/collections/UET Clearance - Milestone 04A Tests: f50cb404-9a6c-4506-a4e3-f1526350f2a1
+    ../postman/collections/UET Clearance - Milestone 04B Tests: 2ca4a2ce-a220-46c2-b25a-aa2e3e60f9ab
+    ../postman/collections/UET Clearance - Milestone 04B (Environment Fixed): 6c43fcfe-bdf0-4fbf-8b23-4e26508e6888
+
 # All resources in the `postman/` folder are automatically registered in Local View.
 # Point to additional files outside the `postman/` folder to register them individually. Example:
 #localResources:

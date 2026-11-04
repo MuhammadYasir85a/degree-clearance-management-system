@@ -1,0 +1,24 @@
+$kind: http-request
+url: "{{base_url}}/clearance/my-status"
+method: GET
+headers:
+  Authorization: Bearer {{student_token}}
+scripts:
+  - type: afterResponse
+    code: |-
+      const res = pm.response.json();
+      if (res.success && res.data && res.data.reviews) {
+          res.data.reviews.forEach(r => {
+              const code = r.department.code;
+              if (code === 'LIB') pm.collectionVariables.set('review_lib_id', r.review_id);
+              if (code === 'ACC') pm.collectionVariables.set('review_acc_id', r.review_id);
+              if (code === 'HST') pm.collectionVariables.set('review_hst_id', r.review_id);
+          });
+      }
+      pm.test('Status fetched with 8 reviews', () => {
+          pm.expect(res.success).to.be.true;
+          pm.expect(res.data.reviews.length).to.eql(8);
+          pm.expect(res.data.progress.percentage).to.eql(0);
+      });
+    language: text/javascript
+order: 7000

@@ -1,0 +1,16 @@
+$kind: http-request
+url: "{{base_url}}/clearance/apply"
+method: POST
+headers:
+  Content-Type: application/json
+  Authorization: Bearer {{student_token}}
+scripts:
+  - type: afterResponse
+    code: |-
+      const res = pm.response.json();
+      pm.test('Duplicate blocked', () => {
+          pm.expect(res.success).to.be.false;
+          pm.expect(res.message).to.include('already have an active');
+      });
+    language: text/javascript
+order: 6000

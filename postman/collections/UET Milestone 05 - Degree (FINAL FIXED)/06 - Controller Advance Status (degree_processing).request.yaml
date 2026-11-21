@@ -1,0 +1,21 @@
+$kind: http-request
+url: "{{base_url}}/degree/controller/update-status/{{degree_app_id}}"
+method: PUT
+headers:
+  Content-Type: application/json
+  Authorization: Bearer {{controller_token}}
+body:
+  type: text
+  content: |-
+    {
+      "status": "degree_processing"
+    }
+scripts:
+  - type: afterResponse
+    code: |-
+      const res = pm.response.json();
+      pm.test('Status updated to degree_processing', () => {
+        pm.expect(res.success).to.be.true;
+      });
+    language: text/javascript
+order: 6000

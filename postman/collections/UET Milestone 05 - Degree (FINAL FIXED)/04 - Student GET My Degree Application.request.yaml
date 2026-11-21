@@ -1,0 +1,19 @@
+$kind: http-request
+url: "{{base_url}}/degree/my-application"
+method: GET
+headers:
+  Authorization: Bearer {{student_token}}
+scripts:
+  - type: afterResponse
+    code: |-
+      const res = pm.response.json();
+      if (res.success && res.data?.degree_app_id) {
+        pm.environment.set('degree_app_id', res.data.degree_app_id);
+        pm.globals.set('degree_app_id', res.data.degree_app_id);
+      }
+      pm.test('Fetched degree application', () => {
+        pm.expect(res.success).to.be.true;
+        pm.expect(res.data).to.have.property('degree_app_id');
+      });
+    language: text/javascript
+order: 4000

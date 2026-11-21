@@ -1,0 +1,6 @@
+$kind: collection
+description: ""
+variables:
+  base_url: http://localhost:5000/api
+  degree_app_id: "1"
+  document_id: "1"

@@ -12,3 +12,9 @@ values:
   - key: clearance_id
     value: ''
     enabled: true
+  - key: controller_token
+    value: ''
+    enabled: true
+  - key: degree_app_id
+    value: ''
+    enabled: true

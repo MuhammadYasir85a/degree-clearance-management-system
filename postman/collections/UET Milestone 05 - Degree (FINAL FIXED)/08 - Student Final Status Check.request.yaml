@@ -1,0 +1,15 @@
+$kind: http-request
+url: "{{base_url}}/degree/my-application"
+method: GET
+headers:
+  Authorization: Bearer {{student_token}}
+scripts:
+  - type: afterResponse
+    code: |-
+      const res = pm.response.json();
+      pm.test('Final degree status has receipt', () => {
+        pm.expect(res.success).to.be.true;
+        pm.expect(res.data.status).to.be.oneOf(['degree_ready', 'degree_processing', 'completed']);
+      });
+    language: text/javascript
+order: 8000

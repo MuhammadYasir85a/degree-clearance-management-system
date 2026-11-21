@@ -4,11 +4,9 @@ values:
     value: ''
   - key: ''
     value: ''
-  - key: admin_token
-    value: ''
   - key: student_token
     value: ''
-  - key: clearance_id
+  - key: controller_token
     value: ''
-  - key: notification_id
+  - key: degree_app_id
     value: ''

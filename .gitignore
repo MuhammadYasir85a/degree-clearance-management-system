@@ -19,3 +19,6 @@ Thumbs.db
 *.log
 uploads/
 temp/
+
+# Downloaded local embedding model files
+.cache/

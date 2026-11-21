@@ -1,0 +1,26 @@
+$kind: http-request
+url: "{{base_url}}/auth/login"
+method: POST
+headers:
+  Content-Type: application/json
+body:
+  type: text
+  content: |-
+    {
+      "email": "awais@student.uetmardan.edu.pk",
+      "password": "student123"
+    }
+scripts:
+  - type: afterResponse
+    code: |-
+      const res = pm.response.json();
+      const token = res.token || res.data?.token || res.accessToken || res.data?.accessToken;
+      if (!token) { console.error('❌ No token in login response', res); }
+      else {
+        pm.environment.set('student_token', token);
+        pm.globals.set('student_token', token);
+        console.log('✅ student_token saved');
+      }
+      pm.test('Student Login OK', () => pm.expect(res.success).to.be.true);
+    language: text/javascript
+order: 1000

@@ -4,7 +4,15 @@ A comprehensive full-stack platform designed to digitize and automate the comple
 
 ---
 
+<<<<<<< HEAD
 ## 📌 Project Overview
+=======
+# Milestone 06 implementation
+
+The chatbot backend now uses Groq generation, Hugging Face hosted MiniLM embeddings, pgvector retrieval, live student status, and persisted conversations. It includes keyword/semantic domain checks and a strict university-only system prompt. See [Milestone 06 setup and verification](docs/MILESTONE_06.md) for configuration, provider availability, tests, and Postman requests. Live provider access is still required before claiming end-to-end readiness.
+
+# Project Overview
+>>>>>>> 13155f7 (feat(ai): complete Milestone 06 AI RAG Chatbot with official UET Mardan data)
 
 Many universities still rely on manual clearance and degree issuance workflows. Students must physically visit multiple departments, stand in long queues, and repeatedly return to campus to check their application status. This causes significant operational bottlenecks, lost records, and delays for both students and university administration.
 
@@ -15,10 +23,46 @@ Many universities still rely on manual clearance and degree issuance workflows. 
 - **Paper-Based Vulnerability:** Relying on paper clearance slips leads to misplaced documents, damaged records, and manual errors.
 - **Repeated Campus Visits:** Students travel back and forth for status updates, document corrections, and receipt collection.
 
+<<<<<<< HEAD
 ### Proposed Solution
 - **Phase 1: Clearance Management:** Student submits a single online request. All 8 departments review in parallel. Approved departments stay locked if another department requests a correction.
 - **Phase 2: Degree Issuance Management:** Gated strictly behind a completed clearance. Allows secure document uploads, Controller document verification, 7-stage status tracking, and collection receipt generation.
 - **Phase 3: AI Assistant (Upcoming):** Google Gemini RAG-powered chatbot to answer policy, fee, document, and workflow queries dynamically.
+=======
+- **Manual Clearance Process:** Students must physically visit Admission Office, Accounts Office, Library, Hostel Office, Store, Transport Section, FYP Coordinator, and Career Liaison Office (CLO)
+- **Time Consuming Process:** Every department works separately and often sequentially, causing delays
+- **Lack of Transparency:** Students cannot easily determine which department approved their clearance or which is causing delays
+- **Paper-Based Workflow:** Reliance on physical forms and signatures leading to lost documents, damaged records, and human errors
+- **Multiple University Visits:** Students repeatedly visit to check status, submit documents, resolve issues, and collect receipts
+- **No Automated Assistance:** No support mechanism to answer common student questions about documents, fees, or application status
+
+## Proposed Solution
+
+### Phase 1: Clearance Management
+
+- Student submits a single clearance request
+- Eight departments review requests **in parallel** (not sequential)
+- Digital approval workflow with real-time status tracking
+- Correction handling: only the department requesting correction re-reviews; others stay locked
+- Automatic Clearance Certificate (PDF) generation when all departments approve
+
+### Phase 2: Degree Issuance Management
+
+- Student uploads required documents (academic, identity, financial, additional)
+- Controller Office verifies all documents and clearance certificate
+- Correction request handling for incorrect documents
+- Automated Collection Receipt (PDF) generation after approval
+- Full degree processing workflow: Processing → Ready → Collected
+
+### AI Assistant (RAG-Based)
+
+- Groq-powered chatbot with Hugging Face hosted embeddings
+- Process guidance ("How do I apply for degree issuance?")
+- Document questions ("Which documents are required?")
+- Policy questions ("What is the verification fee?")
+- Status assistance ("What is my application status?")
+- Powered by pgvector for semantic search over knowledge base
+>>>>>>> 13155f7 (feat(ai): complete Milestone 06 AI RAG Chatbot with official UET Mardan data)
 
 ---
 
@@ -85,10 +129,29 @@ Degree Collected ──► Application Status: COMPLETED 🎓
 - **Security:** bcryptjs (Password Hashing), CORS, Cookie Parser
 - **File Uploads:** Multer (Disk storage with 5MB limit and MIME filters)
 
+<<<<<<< HEAD
 ### AI Architecture (Milestone 06 - Upcoming)
 - **LLM:** Google Gemini API
 - **Embedding / Vector Search:** pgvector on PostgreSQL
 - **Pattern:** Retrieval-Augmented Generation (RAG) over `KnowledgeBase`
+=======
+## Database
+- **PostgreSQL** (hosted on Neon Cloud)
+- **Prisma Client** for type-safe database queries
+
+## AI (Upcoming Integration)
+- **Groq API** - Text generation (`llama-3.1-8b-instant`, configurable)
+- **Hugging Face Inference** - Hosted MiniLM embeddings (384 dimensions)
+- **pgvector** - Cosine similarity search
+- **RAG (Retrieval-Augmented Generation)** - Architecture
+
+## File Storage (Upcoming Integration)
+- **Cloudinary** - Document & image storage
+
+## Development Tools
+- **Concurrently** - Run frontend & backend together with one command
+- **Nodemon** - Auto-restart server on file changes
+>>>>>>> 13155f7 (feat(ai): complete Milestone 06 AI RAG Chatbot with official UET Mardan data)
 
 ---
 
@@ -307,7 +370,253 @@ This project is developed for educational and academic assessment purposes as a 
 
 ---
 
+<<<<<<< HEAD
 ## 👨‍💻 Author
+=======
+# Database Tables Created
+
+- Users
+- Departments
+- ClearanceRequests
+- DepartmentReviews
+- DegreeApplications
+- Documents
+- Receipts
+- Notifications
+- ActivityLogs
+- ChatSessions
+- ChatMessages
+- KnowledgeBase
+
+---
+
+# Development Roadmap
+
+## Phase 1 - Completed
+
+- Project Initialization
+- GitHub Repository Setup
+- Monorepo Structure
+- Environment Setup (React + Vite + Tailwind, Express + Node)
+- Architecture Design
+- Use Case Diagram
+- ER Diagram
+
+## Phase 2 - Completed
+
+- Neon PostgreSQL Setup
+- Prisma ORM Configuration
+- `schema.prisma` Implementation (12 Tables + Enums)
+- First Database Migration
+- 8 University Departments Seeded
+- Database Verified via Prisma Studio
+
+## Phase 3 - Next (Authentication System)
+
+- Student Registration & Verification (OTP via email)
+- JWT-Based Login/Logout
+- Password Hashing with bcryptjs
+- Role-Based Access Control (RBAC) Middleware
+- `/api/auth/register`
+- `/api/auth/login`
+- `/api/auth/me` endpoints
+
+## Phase 4 - Dashboards
+
+- Student Dashboard
+- Department Officer Dashboard
+- Controller Dashboard
+- Admin Dashboard
+- Protected Routes & Role-Based Rendering
+
+## Phase 5 - Workflows
+
+- Phase 1 Clearance Workflow (Parallel Department Verification)
+- Phase 2 Degree Issuance Workflow
+- Document Uploads (Cloudinary Integration)
+- Correction Request Handling
+- Real-Time Status Tracking
+
+## Phase 6 - PDF Generation
+
+- Clearance Certificate PDF Generator
+- Collection Receipt PDF Generator
+- Digital Signatures / QR Codes
+
+## Phase 7 - AI Assistant
+
+- Groq + Hugging Face API Integration
+- RAG (Retrieval-Augmented Generation) Implementation
+- pgvector Integration for Semantic Search
+- Knowledge Base Population
+- Chat UI for Students
+
+## Phase 8 - Final Integration
+
+- Notifications System
+- Activity Logs & Audit Trail
+- Admin Analytics Dashboard
+- Testing & Bug Fixing
+- Deployment (Optional)
+
+---
+
+# Workflow Diagram
+
+```text
+Student Login
+      ↓
+Apply for Clearance
+      ↓
+Parallel Department Reviews:
+   Admission | Accounts | Library | Hostel
+   Store     | Transport| FYP     | CLO
+      ↓
+All Departments Approved?
+      ↓
+Generate Clearance Certificate (PDF)
+      ↓
+Apply for Degree Issuance (Phase 2)
+      ↓
+Upload Required Documents
+      ↓
+Controller Verification
+      ↓
+Correction Required?  →  Student Reuploads
+      ↓
+Generate Collection Receipt (PDF)
+      ↓
+Degree Processing
+      ↓
+Degree Ready → Student Visits University
+      ↓
+Degree Collected → Status: Completed
+```
+
+---
+
+# Required Documents (Phase 2)
+
+## Academic Documents
+- SSC Certificate
+- SSC DMC
+- HSSC Certificate
+- HSSC DMC
+
+## Identity Documents
+- CNIC Copy
+- Passport Size Photograph
+
+## Financial Documents
+- Degree Fee Slip
+- Degree Verification Fee Slip
+
+## Additional Documents
+- Internship Certificate
+
+## Auto-Attached by System
+- Clearance Certificate (from Phase 1)
+
+---
+
+# Automated System Services
+
+The system automatically performs the following tasks:
+
+- Generate Clearance Certificate PDF (when all 8 departments approve)
+- Generate Collection Receipt PDF (after controller approval)
+- Send Notifications & Real-Time Status Alerts
+- Update Application Status at Each Stage
+- Lock Approved Department Reviews (prevent re-review)
+- Audit Logging for Every Action
+
+---
+
+# User Roles Summary
+
+## Student
+- Register / Verification
+- Login
+- Apply for Clearance
+- Track Clearance Status (8 Departments)
+- Download Clearance Certificate
+- Apply for Degree Issuance
+- Upload Documents
+- Respond to Correction Requests
+- Track Application Status
+- Download Collection Receipt
+- Use AI Assistant
+
+## Department Officer
+- View Assigned Clearance Requests (own department only)
+- Approve Clearance
+- Request Corrections with Remarks
+- Add Remarks
+- Mark Not Applicable
+
+## Controller Office
+- Verify Documents & Clearance Certificate
+- Request Document Corrections
+- Approve Degree Issuance
+- Schedule Collection Date
+- Mark Degree as Processing
+- Mark Degree as Ready
+- Mark Degree as Collected
+
+## System Administrator
+- Manage User Accounts & Roles
+- Import Eligible Students (CSV/Excel)
+- Manage University Departments
+- Reset Passwords
+- System Maintenance
+
+---
+
+# Project Architecture Notes
+
+- **Monorepo Structure:** Single Git repo with separate `client/` and `server/` folders
+- **ES Modules:** Backend uses `"type": "module"` in `package.json` for modern `import`/`export` syntax
+- **Prisma Singleton:** Single Prisma Client instance exported from `config/prisma.js`
+- **Role-Based Access Control (RBAC):** Middleware enforces role permissions on protected routes
+- **Parallel Reviews:** Composite UNIQUE key `(clearance_id, department_id)` ensures exactly one review per department per clearance
+- **Polymorphic ActivityLogs:** `entity_type` + `entity_id` references any table (no strict FK)
+- **JWT Authentication:** Stateless auth with cookies + Bearer tokens
+- **Cloud-First Database:** Neon PostgreSQL means teammates don't need local database setup
+
+---
+
+# Troubleshooting
+
+## Issue: `npm error EJSONPARSE` while installing in `server/`
+**Solution:** Delete empty `package.json` and re-run `npm init -y`:
+```bash
+rm package.json
+npm init -y
+```
+
+## Issue: Prisma says `No command registered for migrate`
+**Solution:** You have an experimental Prisma version. Install stable:
+```bash
+npm install -D prisma@latest
+npm install @prisma/client@latest
+```
+
+## Issue: `.env` file not loaded
+**Solution:** Ensure `dotenv.config()` is called at the top of `server/src/index.js`.
+
+## Issue: CORS error between frontend and backend
+**Solution:** Ensure `CLIENT_URL=http://localhost:5173` in `server/.env` matches your frontend URL.
+
+---
+
+# License
+
+This project is licensed under the terms specified in the LICENSE file.
+
+---
+
+# Authors
+>>>>>>> 13155f7 (feat(ai): complete Milestone 06 AI RAG Chatbot with official UET Mardan data)
 
 **Muhammad Yasir**  
 BS Software Engineering — Final Year Project  

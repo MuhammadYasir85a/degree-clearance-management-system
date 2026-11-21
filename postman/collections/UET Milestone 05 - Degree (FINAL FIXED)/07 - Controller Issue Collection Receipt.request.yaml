@@ -1,0 +1,22 @@
+$kind: http-request
+url: "{{base_url}}/degree/controller/generate-receipt/{{degree_app_id}}"
+method: POST
+headers:
+  Content-Type: application/json
+  Authorization: Bearer {{controller_token}}
+body:
+  type: text
+  content: |-
+    {
+      "collection_date": "2026-06-15"
+    }
+scripts:
+  - type: afterResponse
+    code: |-
+      const res = pm.response.json();
+      pm.test('Receipt generated', () => {
+        pm.expect(res.success).to.be.true;
+        pm.expect(res.data).to.have.property('receipt_number');
+      });
+    language: text/javascript
+order: 7000

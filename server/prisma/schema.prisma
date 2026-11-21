@@ -176,10 +176,12 @@ model ChatSession {
   session_id Int           @id @default(autoincrement())
   user_id    Int
   started_at DateTime      @default(now()) @db.Timestamptz(6)
+  updated_at DateTime      @default(now()) @updatedAt @db.Timestamptz(3)
   ended_at   DateTime?     @db.Timestamptz(6)
   messages   ChatMessage[]
   user       User          @relation(fields: [user_id], references: [user_id], onDelete: Cascade)
 
+  @@index([user_id, updated_at, session_id])
   @@map("chat_sessions")
 }
 
@@ -191,6 +193,7 @@ model ChatMessage {
   created_at DateTime    @default(now()) @db.Timestamptz(6)
   session    ChatSession @relation(fields: [session_id], references: [session_id], onDelete: Cascade)
 
+  @@index([session_id, message_id])
   @@map("chat_messages")
 }
 
@@ -201,7 +204,12 @@ model KnowledgeBase {
   content         String
   source_document String? @db.VarChar(200)
   embedding       String?
+  embedding_model String?  @db.VarChar(100)
+  is_active       Boolean @default(true)
+  created_at      DateTime @default(now()) @db.Timestamptz(6)
+  updated_at      DateTime @default(now()) @updatedAt @db.Timestamptz(3)
 
+  @@index([is_active, embedding_model])
   @@map("knowledge_base")
 }
 

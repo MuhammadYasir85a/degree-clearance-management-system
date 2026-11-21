@@ -1,0 +1,26 @@
+$kind: http-request
+url: "{{base_url}}/auth/login"
+method: POST
+headers:
+  Content-Type: application/json
+body:
+  type: text
+  content: |-
+    {
+      "email": "controller@university.edu.pk",
+      "password": "controller123"
+    }
+scripts:
+  - type: afterResponse
+    code: |-
+      const res = pm.response.json();
+      const token = res.token || res.data?.token || res.accessToken || res.data?.accessToken;
+      if (!token) { console.error('❌ No token in login response', res); }
+      else {
+        pm.environment.set('controller_token', token);
+        pm.globals.set('controller_token', token);
+        console.log('✅ controller_token saved');
+      }
+      pm.test('Controller Login OK', () => pm.expect(res.success).to.be.true);
+    language: text/javascript
+order: 2000

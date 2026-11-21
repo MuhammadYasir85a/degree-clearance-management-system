@@ -9,6 +9,7 @@ cloudResources:
     ../postman/collections/UET Clearance - Milestone 04A Tests: f50cb404-9a6c-4506-a4e3-f1526350f2a1
     ../postman/collections/UET Clearance - Milestone 04B Tests: 2ca4a2ce-a220-46c2-b25a-aa2e3e60f9ab
     ../postman/collections/UET Clearance - Milestone 04B (Environment Fixed): 6c43fcfe-bdf0-4fbf-8b23-4e26508e6888
+    ../postman/collections/UET Milestone 05 - Degree (FINAL FIXED): e5b31d69-0f90-485e-9d53-1d5a16a1b03f
 
 # All resources in the `postman/` folder are automatically registered in Local View.
 # Point to additional files outside the `postman/` folder to register them individually. Example:

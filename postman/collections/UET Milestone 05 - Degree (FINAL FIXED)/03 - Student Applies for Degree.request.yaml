@@ -1,0 +1,21 @@
+$kind: http-request
+url: "{{base_url}}/degree/apply"
+method: POST
+headers:
+  Content-Type: application/json
+  Authorization: Bearer {{student_token}}
+scripts:
+  - type: afterResponse
+    code: |-
+      const res = pm.response.json();
+      console.log('Apply response:', JSON.stringify(res));
+      if (res.success && res.data?.degree_app_id) {
+        pm.environment.set('degree_app_id', res.data.degree_app_id);
+        pm.globals.set('degree_app_id', res.data.degree_app_id);
+        console.log('✅ degree_app_id =', res.data.degree_app_id);
+      }
+      pm.test('Degree application created (or already exists)', () => {
+        pm.expect(res.success === true || (res.message && res.message.includes('already'))).to.be.true;
+      });
+    language: text/javascript
+order: 3000

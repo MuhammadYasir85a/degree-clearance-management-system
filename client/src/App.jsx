@@ -1,122 +1,71 @@
-import { useState } from 'react'
-import heroImg from './assets/hero.png'
-import reactLogo from './assets/react.svg'
-import viteLogo from './assets/vite.svg'
-import './App.css'
+import { Navigate, Route, Routes } from 'react-router-dom'
+import { AuthProvider, useAuth } from './context/AuthContext.jsx'
+import PortalLayout from './layouts/PortalLayout.jsx'
+import LoginPage from './pages/public/LoginPage.jsx'
+import RegisterPage from './pages/public/RegisterPage.jsx'
+import StudentDashboard from './pages/student/StudentDashboard.jsx'
+import ClearanceApply from './pages/student/ClearanceApply.jsx'
+import DegreeWorkspace from './pages/student/DegreeWorkspace.jsx'
+import DegreeStatusPage from './pages/student/DegreeStatusPage.jsx'
+import ReceiptPage from './pages/student/ReceiptPage.jsx'
+import OfficerDashboard from './pages/officer/OfficerDashboard.jsx'
+import ControllerDashboard from './pages/controller/ControllerDashboard.jsx'
+import VerificationWorkspace from './pages/controller/VerificationWorkspace.jsx'
+import HandoverDesk from './pages/controller/HandoverDesk.jsx'
+import ControllerReceipt from './pages/controller/ControllerReceipt.jsx'
+import AdminDashboard from './pages/admin/AdminDashboard.jsx'
+import KnowledgeBaseManager from './pages/admin/KnowledgeBaseManager.jsx'
+import EligibleStudentsManager from './pages/admin/EligibleStudentsManager.jsx'
+import DepartmentsManager from './pages/admin/DepartmentsManager.jsx'
+import UsersManager from './pages/admin/UsersManager.jsx'
+import ClearanceOversight from './pages/admin/ClearanceOversight.jsx'
+import AuditLogs from './pages/admin/AuditLogs.jsx'
+import ReceiptVerificationPage from './pages/public/ReceiptVerificationPage.jsx'
+import ForgotPasswordPage from './pages/public/ForgotPasswordPage.jsx'
 
-function App() {
-  const [count, setCount] = useState(0)
+const homeByRole = { student: '/student/dashboard', officer: '/officer/dashboard', controller: '/controller/dashboard', admin: '/admin/dashboard' }
 
-  return (
-    <>
-      <section id="center">
-        <div className="hero">
-          <img src={heroImg} className="base" width="170" height="179" alt="" />
-          <img src={reactLogo} className="framework" alt="React logo" />
-          <img src={viteLogo} className="vite" alt="Vite logo" />
-        </div>
-        <div>
-          <h1>Get started</h1>
-          <p>
-            Edit <code>src/App.jsx</code> and save to test <code>HMR</code>
-          </p>
-        </div>
-        <button
-          type="button"
-          className="counter"
-          onClick={() => setCount((count) => count + 1)}
-        >
-          Count is {count}
-        </button>
-      </section>
-
-      <div className="ticks"></div>
-
-      <section id="next-steps">
-        <div id="docs">
-          <svg className="icon" role="presentation" aria-hidden="true">
-            <use href="/icons.svg#documentation-icon"></use>
-          </svg>
-          <h2>Documentation</h2>
-          <p>Your questions, answered</p>
-          <ul>
-            <li>
-              <a href="https://vite.dev/" target="_blank">
-                <img className="logo" src={viteLogo} alt="" />
-                Explore Vite
-              </a>
-            </li>
-            <li>
-              <a href="https://react.dev/" target="_blank">
-                <img className="button-icon" src={reactLogo} alt="" />
-                Learn more
-              </a>
-            </li>
-          </ul>
-        </div>
-        <div id="social">
-          <svg className="icon" role="presentation" aria-hidden="true">
-            <use href="/icons.svg#social-icon"></use>
-          </svg>
-          <h2>Connect with us</h2>
-          <p>Join the Vite community</p>
-          <ul>
-            <li>
-              <a href="https://github.com/vitejs/vite" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#github-icon"></use>
-                </svg>
-                GitHub
-              </a>
-            </li>
-            <li>
-              <a href="https://chat.vite.dev/" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#discord-icon"></use>
-                </svg>
-                Discord
-              </a>
-            </li>
-            <li>
-              <a href="https://x.com/vite_js" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#x-icon"></use>
-                </svg>
-                X.com
-              </a>
-            </li>
-            <li>
-              <a href="https://bsky.app/profile/vite.dev" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#bluesky-icon"></use>
-                </svg>
-                Bluesky
-              </a>
-            </li>
-          </ul>
-        </div>
-      </section>
-
-      <div className="ticks"></div>
-      <section id="spacer"></section>
-    </>
-  )
+function ProtectedRoute({ roles, children }) {
+  const { user, loading } = useAuth()
+  if (loading) return <div className="app-loading"><span className="loader" /><p>Loading secure portal</p></div>
+  if (!user) return <Navigate to="/login" replace />
+  return roles.includes(user.role) ? children : <Navigate to={homeByRole[user.role]} replace />
 }
 
-export default App
+function RoleHome() {
+  const { user, loading } = useAuth()
+  if (loading) return <div className="app-loading"><span className="loader" /></div>
+  return <Navigate to={user ? homeByRole[user.role] : '/login'} replace />
+}
+
+function AppRoutes() {
+  return <Routes>
+    <Route path="/login" element={<LoginPage />} />
+    <Route path="/register" element={<RegisterPage />} />
+    <Route path="/verify/:receiptNumber?" element={<ReceiptVerificationPage />} />
+    <Route path="/forgot-password" element={<ForgotPasswordPage />} />
+    <Route path="/" element={<RoleHome />} />
+    <Route element={<ProtectedRoute roles={['student', 'officer', 'controller', 'admin']}><PortalLayout /></ProtectedRoute>}>
+      <Route path="/student/dashboard" element={<ProtectedRoute roles={['student']}><StudentDashboard /></ProtectedRoute>} />
+      <Route path="/student/clearance/apply" element={<ProtectedRoute roles={['student']}><ClearanceApply /></ProtectedRoute>} />
+      <Route path="/student/degree/apply" element={<ProtectedRoute roles={['student']}><DegreeWorkspace /></ProtectedRoute>} />
+      <Route path="/student/degree/status" element={<ProtectedRoute roles={['student']}><DegreeStatusPage /></ProtectedRoute>} />
+      <Route path="/student/degree/receipt" element={<ProtectedRoute roles={['student']}><ReceiptPage /></ProtectedRoute>} />
+      <Route path="/officer/dashboard" element={<ProtectedRoute roles={['officer']}><OfficerDashboard /></ProtectedRoute>} />
+      <Route path="/controller/dashboard" element={<ProtectedRoute roles={['controller', 'admin']}><ControllerDashboard /></ProtectedRoute>} />
+      <Route path="/controller/verify/:degreeAppId" element={<ProtectedRoute roles={['controller', 'admin']}><VerificationWorkspace /></ProtectedRoute>} />
+      <Route path="/controller/handover" element={<ProtectedRoute roles={['controller', 'admin']}><HandoverDesk /></ProtectedRoute>} />
+      <Route path="/controller/receipt/:receiptId" element={<ProtectedRoute roles={['controller', 'admin']}><ControllerReceipt /></ProtectedRoute>} />
+      <Route path="/admin/dashboard" element={<ProtectedRoute roles={['admin']}><AdminDashboard /></ProtectedRoute>} />
+      <Route path="/admin/knowledge-base" element={<ProtectedRoute roles={['admin']}><KnowledgeBaseManager /></ProtectedRoute>} />
+      <Route path="/admin/eligible-students" element={<ProtectedRoute roles={['admin']}><EligibleStudentsManager /></ProtectedRoute>} />
+      <Route path="/admin/departments" element={<ProtectedRoute roles={['admin']}><DepartmentsManager /></ProtectedRoute>} />
+      <Route path="/admin/users" element={<ProtectedRoute roles={['admin']}><UsersManager /></ProtectedRoute>} />
+      <Route path="/admin/clearances" element={<ProtectedRoute roles={['admin']}><ClearanceOversight /></ProtectedRoute>} />
+      <Route path="/admin/audit-logs" element={<ProtectedRoute roles={['admin']}><AuditLogs /></ProtectedRoute>} />
+    </Route>
+    <Route path="*" element={<RoleHome />} />
+  </Routes>
+}
+
+export default function App() { return <AuthProvider><AppRoutes /></AuthProvider> }

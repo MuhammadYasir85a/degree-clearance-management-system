@@ -125,7 +125,7 @@ test('seeder writes valid model-tagged document vectors and uses active departme
     assert.equal(row.is_active, true);
     assert.equal(row.embedding_model, 'test-embedding-model');
     assert.equal(JSON.parse(row.embedding).length, 384);
-    assert.ok(row.source_document.startsWith('m06:'));
+    assert.ok(row.source_document.startsWith('platform:'));
   }
   assert.ok(embeddingCalls.every(({ taskType }) => taskType === 'RETRIEVAL_DOCUMENT'));
 });
@@ -158,7 +158,7 @@ test('legacy title matches are adopted with a stable seed source identity', asyn
 });
 
 test('an embedding provider failure aborts before any database writes', async () => {
-  const existing = { kb_id: 9, source_document: 'm06:clearance-overview', content: 'Preserve old content', embedding: '[1]', is_active: true };
+  const existing = { kb_id: 9, source_document: 'platform:clearance-rules', content: 'Preserve old content', embedding: '[1]', is_active: true };
   rows.push(existing);
   failEmbeddingAt = 3;
   await assert.rejects(seedKnowledgeBase(), /Provider unavailable/);
@@ -194,7 +194,9 @@ test('standalone seeder exits unsuccessfully with a sanitized error when the dat
   const script = fileURLToPath(new URL('../src/scripts/seed-knowledgebase.js', import.meta.url));
   const result = spawnSync(process.execPath, [script], {
     env: {
-      ...process.env,
+      PATH: process.env.PATH,
+      HOME: process.env.HOME,
+      NODE_ENV: 'test',
       TRANSFORMERS_OFFLINE: 'true',
       HF_TOKEN: '',
       DATABASE_URL: 'postgresql://unused:unused@127.0.0.1:1/unused',

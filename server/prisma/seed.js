@@ -1,7 +1,6 @@
-import { PrismaClient } from '@prisma/client';
+import prisma, { withDbRetry } from '../src/config/prisma.js';
 import bcrypt from 'bcryptjs';
-
-const prisma = new PrismaClient();
+import { STATUTORY_DEPARTMENTS } from '../src/config/statutory-departments.js';
 
 // ==========================================
 // Neon Cold Start Retry Helper
@@ -13,7 +12,7 @@ function sleep(ms) {
 
 async function connectWithRetry(retries = 5) {
   try {
-    await prisma.$connect();
+    await withDbRetry(() => prisma.$connect());
     console.log('✅ Database connected successfully.');
   } catch (error) {
     console.log(
@@ -37,32 +36,23 @@ async function main() {
   console.log('🌱 Starting database seeding...');
 
   // 1. Seed 8 Clearance Departments
-  const departmentsData = [
-    { name: 'Admission Office', code: 'ADM' },
-    { name: 'Accounts Office', code: 'ACC' },
-    { name: 'University Library', code: 'LIB' },
-    { name: 'Hostel Office', code: 'HST' },
-    { name: 'Central Store', code: 'STR' },
-    { name: 'Transport Section', code: 'TRN' },
-    { name: 'FYP Coordinator', code: 'FYP' },
-    { name: 'Career Liaison Office', code: 'CLO' },
-  ];
+  const departmentsData = STATUTORY_DEPARTMENTS;
 
   const createdDepartments = {};
 
   for (const dept of departmentsData) {
-    const savedDept = await prisma.department.upsert({
+    const savedDept = await withDbRetry(() => prisma.department.upsert({
       where: { code: dept.code },
       update: {},
       create: dept,
-    });
+    }));
 
     createdDepartments[dept.code] = savedDept.department_id;
   }
 
-  console.log('✅ 8 Departments seeded.');
+  console.log(`✅ ${departmentsData.length} statutory departments seeded.`);
 
-  // 2. Seed UET Mardan Academic Programs
+  // 2. Seed generic academic programs
   const programsData = [
     // Undergraduate
     {
@@ -154,16 +144,16 @@ async function main() {
   const createdPrograms = {};
 
   for (const prog of programsData) {
-    const savedProg = await prisma.academicProgram.upsert({
+    const savedProg = await withDbRetry(() => prisma.academicProgram.upsert({
       where: { code: prog.code },
       update: {},
       create: prog,
-    });
+    }));
 
     createdPrograms[prog.code] = savedProg.program_id;
   }
 
-  console.log('✅ UET Mardan Academic Programs seeded.');
+  console.log('✅ Academic programs seeded.');
 
   // Passwords
   const adminPass = await bcrypt.hash('admin123', 10);
@@ -172,7 +162,7 @@ async function main() {
   const studentPass = await bcrypt.hash('student123', 10);
 
   // 3. Seed System Admin
-  await prisma.user.upsert({
+  await withDbRetry(() => prisma.user.upsert({
     where: {
       email: 'admin@university.edu.pk',
     },
@@ -183,10 +173,10 @@ async function main() {
       password_hash: adminPass,
       role: 'admin',
     },
-  });
+  }));
 
   // 4. Seed Controller
-  await prisma.user.upsert({
+  await withDbRetry(() => prisma.user.upsert({
     where: {
       email: 'controller@university.edu.pk',
     },
@@ -197,65 +187,82 @@ async function main() {
       password_hash: controllerPass,
       role: 'controller',
     },
-  });
+  }));
 
   // 5. Seed Department Officers
   for (const dept of departmentsData) {
     const email = `officer.${dept.code.toLowerCase()}@university.edu.pk`;
 
-    await prisma.user.upsert({
+    await withDbRetry(() => prisma.user.upsert({
       where: {
         email,
       },
       update: {},
       create: {
-        full_name: `${dept.name} Officer`,
+        full_name: dept.officerName,
         email,
         password_hash: officerPass,
         role: 'officer',
         department_id: createdDepartments[dept.code],
       },
-    });
+    }));
   }
 
-  console.log('✅ Admin, Controller, and 8 Officers seeded.');
+  console.log(`✅ Admin, Controller, and ${departmentsData.length} Officers seeded.`);
 
   // 6. Seed Sample Eligible Student
-  await prisma.eligibleStudent.upsert({
+  await withDbRetry(() => prisma.eligibleStudent.upsert({
     where: {
       registration_no: '2021-SE-101',
     },
-    update: {},
+    update: {
+      father_name: 'Muhammad Iqbal',
+      cnic: '1560312345678',
+      passing_year: 2025,
+      cgpa: 3.42,
+      is_registered: true,
+    },
     create: {
       registration_no: '2021-SE-101',
       email: 'student@university.edu.pk',
       full_name: 'Muhammad Awais',
+      father_name: 'Muhammad Iqbal',
+      cnic: '1560312345678',
       program_id: createdPrograms['BSC-SE'],
       batch_year: 2021,
+      passing_year: 2025,
+      cgpa: 3.42,
+      is_registered: true,
     },
-  });
+  }));
 
   console.log('✅ Sample Eligible Student seeded (2021-SE-101).');
 
   // 7. Seed Test Student User
-  await prisma.user.upsert({
-    where: {
-      email: 'awais@student.uetmardan.edu.pk',
+  await withDbRetry(() => prisma.user.upsert({
+    where: { registration_no: '2021-SE-101' },
+    update: {
+      email: 'student@university.edu.pk',
+      father_name: 'Muhammad Iqbal',
+      passing_year: 2025,
+      cgpa: 3.42,
     },
-    update: {},
     create: {
       full_name: 'Muhammad Awais',
-      email: 'awais@student.uetmardan.edu.pk',
+      father_name: 'Muhammad Iqbal',
+      email: 'student@university.edu.pk',
       password_hash: studentPass,
       role: 'student',
       program_id: createdPrograms['BSC-SE'],
       registration_no: '2021-SE-101',
       cnic: '1560312345678',
+      passing_year: 2025,
+      cgpa: 3.42,
     },
-  });
+  }));
 
   console.log(
-    '✅ Test Student User seeded (awais@student.uetmardan.edu.pk).'
+    '✅ Test Student User seeded (student@university.edu.pk).'
   );
 
   console.log('🎉 Seeding completed successfully!');
@@ -267,5 +274,5 @@ main()
     process.exit(1);
   })
   .finally(async () => {
-    await prisma.$disconnect();
+    await withDbRetry(() => prisma.$disconnect());
   });

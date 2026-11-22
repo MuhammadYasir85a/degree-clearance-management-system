@@ -166,6 +166,17 @@ export async function sendMessage(req, res) {
   }
 }
 
+// Runs semantic retrieval and generation without persisting an administrator chat.
+export async function adminTestRag(req, res) {
+  try {
+    const message = textField(req.body?.message, 'message', MAX_MESSAGE_LENGTH);
+    const result = await generateRAGAnswer({ userMessage: message });
+    return res.status(200).json({ success: true, data: result });
+  } catch (error) {
+    return respondWithError(res, error, 'Failed to run the RAG simulator.');
+  }
+}
+
 // GET /api/chat/sessions?page=1&limit=20
 export async function getSessions(req, res) {
   try {

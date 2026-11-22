@@ -1,4 +1,5 @@
 import prisma, { withDbRetry } from '../config/prisma.js';
+import { positiveInteger, publicError } from '../utils/http.utils.js';
 
 // GET /api/notifications (All Authenticated Users)
 export const getMyNotifications = async (req, res) => {
@@ -20,12 +21,7 @@ export const getMyNotifications = async (req, res) => {
       data: notifications,
     });
   } catch (error) {
-    console.error('Get Notifications Error:', error);
-    return res.status(500).json({
-      success: false,
-      message: 'Failed to fetch notifications.',
-      error: error.message,
-    });
+    return publicError(res, error, 'Failed to fetch notifications.');
   }
 };
 
@@ -33,14 +29,7 @@ export const getMyNotifications = async (req, res) => {
 export const markNotificationAsRead = async (req, res) => {
   try {
     const userId = req.user.user_id;
-    const notificationId = parseInt(req.params.notification_id, 10);
-
-    if (isNaN(notificationId)) {
-      return res.status(400).json({
-        success: false,
-        message: 'Invalid notification ID.',
-      });
-    }
+    const notificationId = positiveInteger(req.params.notification_id, 'notification_id');
 
     const notification = await withDbRetry(() =>
       prisma.notification.findUnique({
@@ -75,12 +64,7 @@ export const markNotificationAsRead = async (req, res) => {
       data: updated,
     });
   } catch (error) {
-    console.error('Mark Notification Read Error:', error);
-    return res.status(500).json({
-      success: false,
-      message: 'Failed to update notification.',
-      error: error.message,
-    });
+    return publicError(res, error, 'Failed to update notification.');
   }
 };
 
@@ -101,11 +85,6 @@ export const markAllNotificationsAsRead = async (req, res) => {
       message: 'All notifications marked as read.',
     });
   } catch (error) {
-    console.error('Mark All Read Error:', error);
-    return res.status(500).json({
-      success: false,
-      message: 'Failed to mark notifications as read.',
-      error: error.message,
-    });
+    return publicError(res, error, 'Failed to mark notifications as read.');
   }
 };

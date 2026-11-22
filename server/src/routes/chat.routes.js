@@ -10,6 +10,7 @@ import {
   adminListKB,
   adminUpdateKB,
   adminDeleteKB,
+  adminTestRag,
 } from '../controllers/chat.controller.js';
 
 const router = express.Router();
@@ -25,5 +26,6 @@ router.post('/admin/kb', authorize('admin'), adminCreateKB);
 router.get('/admin/kb', authorize('admin', 'controller'), adminListKB);
 router.put('/admin/kb/:kb_id', authorize('admin'), adminUpdateKB);
 router.delete('/admin/kb/:kb_id', authorize('admin'), adminDeleteKB);
+router.post('/admin/test-rag', authorize('admin'), chatRateLimit, adminTestRag);
 
 export default router;

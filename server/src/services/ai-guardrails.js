@@ -25,7 +25,7 @@ export function classifyQuestion(text, history = []) {
 
 export function domainRefusal(reason) {
   return {
-    answer: 'I am the UET Mardan Clearance & Degree Assistant. I can help with university clearance, degree applications, required documents, fees, and your application status. Please ask a question about these services.',
+    answer: 'I am the GradFlow Academic Assistant. I can help with university clearance, degree applications, required documents, fees, and your application status. Please ask a question about these services.',
     sources: [],
     guardrail: { blocked: true, reason },
   };

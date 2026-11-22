@@ -112,7 +112,7 @@ test('live context uses actual relations, latest records and receipt collection 
   studentLookup = async () => ({
     role: 'student', full_name: 'Test Student', email: 'private@example.test', cnic: 'secret', password_hash: 'secret-hash', program: { name: 'SE' },
     clearanceRequests: [{ clearance_id: 4, status: 'correction_required', departmentReviews: [{ status: 'correction_required', department: { name: 'Library' }, remarks: 'Return book 123' }] }],
-    degreeApplications: [{ degree_app_id: 3, clearance_id: 2, status: 'degree_ready', documents: [{ document_type: 'CNIC', verification_status: 'verified', remarks: null }], receipt: { receipt_number: 'RCT-3', collection_date: '2026-12-01' } }],
+    degreeApplications: [{ degree_app_id: 3, clearance_id: 4, status: 'degree_ready', documents: [{ document_type: 'CNIC', verification_status: 'verified', remarks: null }], receipt: { receipt_number: 'RCT-3', collection_date: '2026-12-01' } }],
   });
   const result = await ai.getStudentLiveContext(9);
   const context = JSON.parse(result);

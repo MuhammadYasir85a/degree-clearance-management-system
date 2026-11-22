@@ -35,8 +35,12 @@ model EligibleStudent {
   registration_no     String               @unique @db.VarChar(30)
   email               String               @unique @db.VarChar(150)
   full_name           String               @db.VarChar(100)
+  father_name         String?              @db.VarChar(100)
+  cnic                String?              @unique @db.VarChar(15)
   program_id          Int
   batch_year          Int?
+  passing_year        Int?
+  cgpa                Decimal?             @db.Decimal(3, 2)
   is_registered       Boolean              @default(false)
   created_at          DateTime             @default(now()) @db.Timestamptz(6)
   program             AcademicProgram      @relation(fields: [program_id], references: [program_id])
@@ -49,13 +53,17 @@ model User {
   user_id            Int                 @id @default(autoincrement())
   department_id      Int?
   full_name          String              @db.VarChar(100)
+  father_name        String?             @db.VarChar(100)
   email              String              @unique @db.VarChar(150)
   password_hash      String              @db.VarChar(255)
   role               UserRole            @default(student)
   registration_no    String?             @unique @db.VarChar(30)
   cnic               String?             @unique @db.VarChar(15)
   phone              String?             @db.VarChar(20)
+  passing_year       Int?
+  cgpa               Decimal?            @db.Decimal(3, 2)
   is_active          Boolean             @default(true)
+  auth_version       Int                 @default(0)
   created_at         DateTime            @default(now()) @db.Timestamptz(6)
   program_id         Int?
   activityLogs       ActivityLog[]
@@ -65,10 +73,27 @@ model User {
   departmentReviews  DepartmentReview[]
   notifications      Notification[]
   receipts           Receipt[]
+  passwordReset      PasswordResetRequest?
   department         Department?         @relation(fields: [department_id], references: [department_id])
   program            AcademicProgram?    @relation(fields: [program_id], references: [program_id])
 
   @@map("users")
+}
+
+model PasswordResetRequest {
+  reset_id         Int       @id @default(autoincrement())
+  user_id          Int       @unique
+  otp_hash         String    @db.VarChar(64)
+  otp_expires_at   DateTime  @db.Timestamptz(6)
+  otp_attempts     Int       @default(0)
+  locked_until     DateTime? @db.Timestamptz(6)
+  reset_token_hash String?   @unique @db.VarChar(64)
+  reset_expires_at DateTime? @db.Timestamptz(6)
+  created_at       DateTime  @default(now()) @db.Timestamptz(6)
+  user             User      @relation(fields: [user_id], references: [user_id], onDelete: Cascade)
+
+  @@index([otp_expires_at])
+  @@map("password_reset_requests")
 }
 
 model ClearanceRequest {
@@ -83,6 +108,7 @@ model ClearanceRequest {
   degreeApplication        DegreeApplication?
   departmentReviews        DepartmentReview[]
 
+  @@index([student_id, status])
   @@map("clearance_requests")
 }
 
@@ -93,12 +119,15 @@ model DepartmentReview {
   officer_id       Int?
   status           ReviewStatus     @default(pending)
   remarks          String?
+  student_response String?
+  resubmitted_at   DateTime?        @db.Timestamptz(6)
   reviewed_at      DateTime?        @db.Timestamptz(6)
   clearanceRequest ClearanceRequest @relation(fields: [clearance_id], references: [clearance_id], onDelete: Cascade)
   department       Department       @relation(fields: [department_id], references: [department_id])
   officer          User?            @relation(fields: [officer_id], references: [user_id])
 
   @@unique([clearance_id, department_id])
+  @@index([department_id, status])
   @@map("department_reviews")
 }
 
@@ -107,6 +136,9 @@ model DegreeApplication {
   student_id       Int
   clearance_id     Int              @unique
   status           DegreeStatus     @default(application_started)
+  fee_slip_number  String?          @db.VarChar(80)
+  verification_slip_number String?  @db.VarChar(80)
+  deposit_date     DateTime?        @db.Date
   approved_at      DateTime?        @db.Timestamptz(6)
   ready_at         DateTime?        @db.Timestamptz(6)
   collected_at     DateTime?        @db.Timestamptz(6)
@@ -117,6 +149,8 @@ model DegreeApplication {
   documents        Document[]
   receipt          Receipt?
 
+  @@index([student_id, degree_app_id])
+  @@index([status, degree_app_id])
   @@map("degree_applications")
 }
 
@@ -130,6 +164,7 @@ model Document {
   uploaded_at         DateTime          @default(now()) @db.Timestamptz(6)
   degreeApplication   DegreeApplication @relation(fields: [degree_app_id], references: [degree_app_id], onDelete: Cascade)
 
+  @@unique([degree_app_id, document_type])
   @@map("documents")
 }
 
@@ -156,6 +191,7 @@ model Notification {
   created_at      DateTime @default(now()) @db.Timestamptz(6)
   user            User     @relation(fields: [user_id], references: [user_id], onDelete: Cascade)
 
+  @@index([user_id, is_read, created_at])
   @@map("notifications")
 }
 
@@ -166,6 +202,8 @@ model ActivityLog {
   entity_type String   @db.VarChar(50)
   entity_id   Int?
   description String?
+  ip_address  String?  @db.VarChar(64)
+  details     Json?
   created_at  DateTime @default(now()) @db.Timestamptz(6)
   user        User?    @relation(fields: [user_id], references: [user_id])
 
@@ -224,8 +262,10 @@ model RegistrationRequest {
   created_at      DateTime        @default(now()) @db.Timestamptz(6)
   reviewed_at     DateTime?       @db.Timestamptz(6)
   is_otp_verified Boolean         @default(false)
-  otp_code        String?         @db.VarChar(6)
+  otp_code        String?         @db.VarChar(64)
   otp_expires_at  DateTime?       @db.Timestamptz(6)
+  otp_attempts    Int             @default(0)
+  otp_locked_until DateTime?      @db.Timestamptz(6)
   eligibleStudent EligibleStudent @relation(fields: [eligible_id], references: [eligible_id], onDelete: Cascade)
 
   @@map("registration_requests")

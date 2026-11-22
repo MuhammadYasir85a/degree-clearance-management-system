@@ -44,14 +44,16 @@ before(async () => {
   // Simulate a database whose program/registration schema already existed.
   await db.exec(registrationSql);
   await db.exec(await migration('20261117000000_m06_rag_chatbot'));
+  await db.exec(await migration('20261122000000_backend_hardening'));
+  await db.exec(await migration('20261123000000_password_recovery'));
 });
 
 after(async () => db.close());
 
-test('full migration chain creates all fifteen tables and enables pgvector', async () => {
+test('full migration chain creates all sixteen tables and enables pgvector', async () => {
   const { rows } = await db.query("SELECT table_name FROM information_schema.tables WHERE table_schema='public' AND table_type='BASE TABLE'");
-  assert.equal(rows.length, 15);
-  for (const table of ['academic_programs', 'eligible_students', 'registration_requests', 'knowledge_base', 'chat_sessions']) {
+  assert.equal(rows.length, 16);
+  for (const table of ['academic_programs', 'eligible_students', 'registration_requests', 'knowledge_base', 'chat_sessions', 'password_reset_requests']) {
     assert.ok(rows.some((row) => row.table_name === table));
   }
   assert.equal((await db.query("SELECT extname FROM pg_extension WHERE extname='vector'")).rows.length, 1);
@@ -102,4 +104,14 @@ test('session deletion cascades messages in the migrated database', async () => 
   assert.equal((await db.query('SELECT COUNT(*)::int AS count FROM chat_messages WHERE session_id=1')).rows[0].count, 1);
   await db.exec('DELETE FROM chat_sessions WHERE session_id=1');
   assert.equal((await db.query('SELECT COUNT(*)::int AS count FROM chat_messages WHERE session_id=1')).rows[0].count, 0);
+});
+
+test('hardening constraints reject duplicate active clearances and duplicate document types', async () => {
+  await db.query("INSERT INTO clearance_requests(student_id,status) VALUES (1,'in_progress')");
+  await assert.rejects(db.query("INSERT INTO clearance_requests(student_id,status) VALUES (1,'correction_required')"));
+  await db.query("UPDATE clearance_requests SET status='completed' WHERE clearance_id=1");
+  await db.query("INSERT INTO clearance_requests(student_id,status) VALUES (1,'in_progress')");
+  await db.query("INSERT INTO degree_applications(student_id,clearance_id,status,updated_at) VALUES (1,1,'application_started',CURRENT_TIMESTAMP)");
+  await db.query("INSERT INTO documents(degree_app_id,document_type,file_url) VALUES (1,'CNIC','/private/documents/a.pdf')");
+  await assert.rejects(db.query("INSERT INTO documents(degree_app_id,document_type,file_url) VALUES (1,'CNIC','/private/documents/b.pdf')"));
 });

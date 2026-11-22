@@ -1,5 +1,5 @@
 -- Preserve the existing text embeddings while enabling database-side cosine search.
--- The service casts validated JSON vectors to vector(768) and filters by model.
+-- The service casts validated JSON vectors to vector(384) and filters by model.
 CREATE EXTENSION IF NOT EXISTS vector;
 
 ALTER TABLE "knowledge_base"

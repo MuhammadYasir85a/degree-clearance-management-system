@@ -37,7 +37,7 @@ export const protect = async (req, res, next) => {
       })
     );
 
-    if (!user || !user.is_active) {
+    if (!user || !user.is_active || decoded.authVersion !== user.auth_version) {
       return res.status(401).json({
         success: false,
         message: 'User account not found or deactivated.',

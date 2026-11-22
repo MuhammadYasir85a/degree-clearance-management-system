@@ -40,7 +40,7 @@
         "description": "Uses the local development seed account. Update credentials in this request when testing another environment.",
         "body": {
           "mode": "raw",
-          "raw": "{\n  \"email\": \"awais@student.uetmardan.edu.pk\",\n  \"password\": \"student123\"\n}",
+          "raw": "{\n  \"email\": \"student@university.edu.pk\",\n  \"password\": \"student123\"\n}",
           "options": {
             "raw": {
               "language": "json"

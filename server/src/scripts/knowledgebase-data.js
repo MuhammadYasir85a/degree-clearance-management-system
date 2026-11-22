@@ -1,129 +1,76 @@
-// ALL VERIFIED UET MARDAN DATA INCLUDED INTERNALLY
-const officialKnowledgeBaseData = [
+const platformKnowledgeBase = [
   {
-    title: 'UET Mardan Degree Application Prerequisites & Mandatory Checklist',
+    title: 'Degree Application Prerequisites and Document Checklist',
     category: 'degree_process',
-    content: `Per the official UET Mardan "Application Form for Issuance of Degree" and Prospectus:
-Candidates must apply PERSONALLY for degree issuance (no one can apply on behalf of the candidate).
+    content: `Students may begin degree issuance only after completing their academic requirements and institutional clearance.
 
-Eligibility Prerequisites:
-1. Completion of all academic degree requirements in compliance with UET Mardan Satisfactory Academic Progress (SAP) rules and PEC/HEC guidelines.
-2. Full settlement of all outstanding university dues.
-3. Attached official UET Mardan Clearance Certificate.
+Required documents:
+1. Completed institutional clearance certificate.
+2. Degree issuance fee deposit slip.
+3. Degree verification fee deposit slip.
+4. Identity document copy.
+5. Recent passport-size photograph.
+6. Secondary and higher-secondary marks certificates and certificates.
+7. Practical training or internship certificate when required by the programme.
 
-Mandatory Document Checklist to attach with Degree Application:
-1. University Clearance Certificate from UET Mardan (all departmental dues cleared).
-2. Original Bank Deposit Slip for Issuance of Degree (deposited in Bank of Khyber).
-3. Original Bank Deposit Slip for Verification of Degree (separate slip required).
-4. Attested photocopy of CNIC.
-5. Two (02) passport-size color photographs: ONE attested on the front and ONE attested on the back by the Chairman of the concerned Department.
-6. Internship / 800-Hour Practical Training or Experience Certificate, duly attested by the Department Chairman (mandatory for engineering/computing programs).
-7. Photocopy of Final Year DMC and an attested photocopy of SSC (Matric) Certificate.
-
-Note: All particulars on the form must be filled in the candidate's own handwriting with names and father's name written in BLOCK letters. Incomplete forms will be rejected or cause delays.`
+All uploaded files must be readable, complete, and consistent with the student's academic record. The Controller of Examinations may reject an unclear or incorrect document and request a corrected copy.`,
   },
   {
-    title: 'UET Mardan Official Fee Structure & Bank Account Details',
+    title: 'Fee Deposit and Payment Guidance',
     category: 'fees_and_accounts',
-    content: `Official UET Mardan Fee Schedule (per Prospectus 2023-24):
-1. Degree Issuance Fee: Rs. 5,000.
-2. Duplicate Degree Fee: Rs. 10,000.
-3. Semester Transcript / DMC (Ordinary): Rs. 1,000.
-4. Semester Transcript / DMC (Urgent): Rs. 1,500.
-5. Final Transcript / Final DMC (Ordinary Embossed): Rs. 1,200.
-6. Final Transcript / Final DMC (Urgent Embossed): Rs. 2,400.
+    content: `Degree issuance and verification fees must be deposited using the institution's currently approved banking instructions.
 
-Official Bank & Deposit Details:
-- Bank Name: The Bank of Khyber (BoK).
-- Branch: Sugar Mill Road Branch, Mardan (Branch Code: 0179).
-- Account Title: Miscellaneous Fund UETM.
-- Account Number: 003001354859 (or 3001354859).
-- IBAN: PK98 KHYB 0179 0030 0135 4859.
+Students should obtain the current fee amount, bank name, account title, account number, and deposit procedure from the Accounts Office or their institution's official fee notice. Separate slips may be required for degree issuance and degree verification.
 
-Important: Fees must be paid through bank challan/deposit slip at Bank of Khyber. Separate deposit slips are required for Degree Issuance and Degree Verification.`
+GradFlow does not publish institution-specific bank credentials in the shared knowledge base. Students must not rely on old receipts, screenshots, or unofficial messages for payment details.`,
   },
   {
-    title: 'Clearance Process, Institutional Sections & Chairman Attestation',
+    title: 'Institutional Clearance Process and Corrections',
     category: 'clearance_rules',
-    content: `Before degree issuance, graduating students must complete institutional clearance across all university sections and obtain the official Clearance Certificate.
+    content: `Before degree issuance, a graduating student must complete clearance from every active office configured by the institution.
 
-Key Clearance Sections & Offices (per UET Mardan Statutes):
-1. Head of Concerned Academic Department / Chairman (Verifies curriculum requirements, FYP, and training).
-2. Dean's Office (Academic compliance).
-3. Central Library (Return of borrowed books, thesis copies, and clearance of overdue fines).
-4. Central Store Section (Laboratory tools, apparatus, and equipment clearance).
-5. Transport Section (Return of university bus route passes and clearance of outstanding dues).
-6. Hostel Wardens (Clearance of room possession, mess bills, and hostel dues for resident students).
-7. Treasurer / Accounts Section (Verification of tuition fees, fines, and overall university accounts).
-8. Registrar Office & Admission Section (Final document archive and record verification).
-9. Director of Works (Campus property clearance).
+Common clearance responsibilities include academic records, accounts, library material, hostel obligations, transport, stores, final-year project requirements, student affairs, and other statutory offices.
 
-Correction & Re-review Policy:
-Incomplete forms or missing particulars will not be processed. If any section flags an issue (e.g. pending dues or unreturned property), previously approved sections remain protected/locked while the student resolves the specific objection.`
+If an office requests a correction, approvals already granted by other offices remain locked. Only the office requesting the correction reviews the student's response again. An approved review cannot be modified by an officer through the normal workflow.`,
   },
   {
-    title: 'Degree Collection, Handover & Personal Application Policy',
+    title: 'Degree Collection and Physical Handover',
     category: 'collection_policy',
-    content: `UET Mardan Degree Handover & Collection Rules:
-1. Personal Application Rule: The official degree regulation explicitly dictates that no one can apply on behalf of the candidate concerned. The student must apply directly.
-2. Collection Readiness: When all 10 verified documents and clearance certificates are approved by the Controller of Examinations, the degree application transitions to "degree_ready", and a digital Collection Receipt is issued.
-3. Physical Pickup:
-   - Location: Office of the Controller of Examinations, Ground Floor, Academic Block, UET Mardan.
-   - Requirements for Handover: The student must produce their Original CNIC, Student ID card, and the printed Collection Receipt.
-   - Handover is formally recorded with date, signature, and permanent ledger entry.`
+    content: `After all required documents are verified, the degree application moves into processing. The Controller of Examinations issues a collection receipt when the degree is ready.
+
+For physical handover, the student must present the original identity document, student card, and printed collection receipt. Staff must complete every handover verification check before recording collection.
+
+The exact collection date, office location, and instructions appear on the student's official receipt and dashboard notification.`,
   },
   {
-    title: 'UET Mardan Official Directory, Contacts & Working Hours',
+    title: 'Support, Office Contacts and Working Hours',
     category: 'general_info',
-    content: `Official Directory & Contact Information for UET Mardan:
+    content: `GradFlow is a generic academic operations platform used by university examination and clearance offices.
 
-Key Administrative Offices:
-- Controller of Examinations: controller@uetmardan.edu.pk | Phone: +92-937-9230249
-- Registrar Office: Registrar@uetmardan.edu.pk | Phone: +92-937-9230295 | Fax: +92-937-9230296
-- Dean of Engineering: dean@uetmardan.edu.pk | Phone: +92-937-9230449
-- General Inquiries: info@uetmardan.edu.pk
+Institution-specific email addresses, telephone numbers, office locations, banking details, and working hours are intentionally not embedded in the shared platform knowledge base. Students should use the contact information published by their own institution or contact the relevant office shown in their application status.
 
-Academic Department Chairmen:
-- Computer Software Engineering (SE): chair.se@uetmardan.edu.pk | Phone: +92-937-9230452
-- Computer Science (CS): chair.cs@uetmardan.edu.pk | Phone: +92-937-9230452
-- Electrical Engineering (EE): chair.ee@uetmardan.edu.pk | Phone: +92-937-9230482
-- Telecommunication Engineering (TE): chair.te@uetmardan.edu.pk | Phone: +92-937-9230454
-
-Hostels:
-- Ahmad Shah Abdali Boys Hostel: Contact Warden Office
-- Ayesha Girls Hostel: Phone: +92-937-9230236
-
-Campus Address:
-University of Engineering & Technology (UET) Mardan, Charsadda Road, Mardan, Khyber Pakhtunkhwa, Pakistan.
-
-Official Working Hours:
-Monday to Friday: 08:00 AM to 04:00 PM (Administrative & Examination offices). Closed on Saturdays, Sundays, and public holidays.`
-  }
+For an official decision, contact the Controller of Examinations, Registrar, Accounts Office, or the department responsible for the pending review.`,
+  },
 ];
 
 const sourceDocuments = [
-  'm06:degree-application-checklist',
-  'm06:fees-and-bank-details',
-  'm06:clearance-sections',
-  'm06:degree-collection-policy',
-  'm06:official-directory',
+  'platform:degree-application-checklist',
+  'platform:fee-deposit-guidance',
+  'platform:clearance-rules',
+  'platform:degree-collection-policy',
+  'platform:support-guidance',
 ];
 
-/**
- * Return fresh article objects for the idempotent seeder. This module contains
- * data only; database writes and embedding generation belong to
- * seed-knowledgebase.js so importing it never starts work or exits Node.
- */
 export function buildKnowledgeBaseArticles(activeDepartments = []) {
   const departmentNames = activeDepartments
     .map((department) => department?.name?.trim())
     .filter(Boolean);
 
-  return officialKnowledgeBaseData.map((article, index) => ({
+  return platformKnowledgeBase.map((article, index) => ({
     ...article,
     source_document: sourceDocuments[index],
     ...(index === 2 && departmentNames.length > 0
-      ? { content: `${article.content}\n\nCurrently active clearance departments in the system:\n${departmentNames.map((name) => `- ${name}`).join('\n')}` }
+      ? { content: `${article.content}\n\nCurrently active clearance offices:\n${departmentNames.map((name) => `- ${name}`).join('\n')}` }
       : {}),
   }));
 }

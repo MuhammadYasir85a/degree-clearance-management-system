@@ -4,11 +4,16 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "test": "node --experimental-test-module-mocks --test",
+    "test": "node --experimental-test-module-mocks --test --test-concurrency=1 --test-reporter=spec test/*.test.js",
     "start": "node src/index.js",
     "dev": "nodemon src/index.js",
     "postinstall": "prisma skills sync || exit 0",
-    "seed:kb": "node src/scripts/seed-knowledgebase.js"
+    "seed:kb": "node src/scripts/seed-knowledgebase.js",
+    "backfill:pdfs": "node src/scripts/backfill-generated-pdfs.js",
+    "seed:departments": "node prisma/seed-remaining-departments.js",
+    "verify:departments": "node src/scripts/verify-statutory-departments.js",
+    "verify:clearance-spawn": "node src/scripts/verify-clearance-spawn.js",
+    "test:e2e": "node tests/e2e-degree-lifecycle.test.js"
   },
   "keywords": [],
   "author": "",
@@ -21,12 +26,18 @@
     "cors": "^2.8.6",
     "csv-parser": "^3.2.1",
     "dotenv": "^18.0.7",
+    "exceljs": "^4.4.0",
     "express": "^5.3.0",
+    "file-type": "^22.3.0",
     "groq-sdk": "^1.6.0",
+    "helmet": "^8.3.0",
     "jsonwebtoken": "^9.0.3",
     "morgan": "^1.12.1",
     "multer": "^2.5.0",
-    "prisma": "^6.19.3"
+    "nodemailer": "^10.6.1",
+    "pdfkit": "^0.21.0",
+    "prisma": "^6.19.3",
+    "qrcode": "^1.5.4"
   },
   "devDependencies": {
     "@electric-sql/pglite": "^0.5.16",

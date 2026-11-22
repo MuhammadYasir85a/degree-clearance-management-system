@@ -18,6 +18,8 @@ Thumbs.db
 .idea/
 *.log
 uploads/
+private-uploads/
+server/private-uploads/
 temp/
 
 # Downloaded local embedding model files

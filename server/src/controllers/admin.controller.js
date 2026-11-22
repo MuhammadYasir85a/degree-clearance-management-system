@@ -1,202 +1,85 @@
-import prisma, { withDbRetry } from '../config/prisma.js';
-import csv from 'csv-parser';
 import { Readable } from 'stream';
+import csv from 'csv-parser';
+import ExcelJS from 'exceljs';
+import prisma, { withDbRetry } from '../config/prisma.js';
+import { hashPassword } from '../utils/auth.utils.js';
+import { pagination, positiveInteger, publicError } from '../utils/http.utils.js';
 
-// @desc    Get all pending registration requests
-// @route   GET /api/admin/registration-requests
-// @access  Private (Admin)
-export const getPendingRequests = async (req, res) => {
-  try {
-    const requests = await withDbRetry(() =>
-      prisma.registrationRequest.findMany({
-        where: { status: 'pending' },
-        include: {
-          eligibleStudent: {
-            include: { program: true },
-          },
-        },
-        orderBy: { created_at: 'asc' },
-      })
-    );
+const CNIC = /^\d{5}-\d{7}-\d$/;
+const EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+const STAFF_ROLES = new Set(['officer', 'controller', 'admin']);
+const clean = (value) => typeof value === 'string' ? value.trim() : '';
+const number = (value) => value === '' || value == null ? null : Number(value);
+const clientIp = (req) => clean(req.headers['x-forwarded-for']).split(',')[0] || req.ip || null;
+function fail(message, status = 400) { const error = new Error(message); error.status = status; throw error; }
+const audit = (tx, req, action, entity_type, entity_id, description, details) => withDbRetry(() => tx.activityLog.create({ data: { user_id: req.user.user_id, action, entity_type, entity_id, description, ip_address: clientIp(req), details } }));
 
-    res.status(200).json({ success: true, count: requests.length, data: requests });
-  } catch (error) {
-    res.status(500).json({ success: false, message: error.message });
-  }
-};
+function normalizeRoster(body) {
+  const suppliedCnic = clean(body.cnic);
+  const row = { registration_no: clean(body.registration_no).toUpperCase(), full_name: clean(body.full_name), father_name: clean(body.father_name) || null, email: clean(body.email).toLowerCase(), cnic: suppliedCnic.replace(/\D/g, ''), program_code: clean(body.program_code).toUpperCase(), cgpa: number(body.cgpa), passing_year: number(body.passing_year), batch_year: number(body.batch_year) };
+  const errors = [];
+  if (!row.registration_no) errors.push('registration number is required');
+  if (!row.full_name) errors.push('full name is required');
+  if (!CNIC.test(suppliedCnic) && !/^\d{13}$/.test(suppliedCnic)) errors.push('CNIC must use XXXXX-XXXXXXX-X format');
+  if (!row.program_code) errors.push('program code is required');
+  if (!EMAIL.test(row.email)) errors.push('valid email is required for OTP registration');
+  if (!Number.isFinite(row.cgpa) || row.cgpa < 0 || row.cgpa > 4) errors.push('CGPA must be between 0.00 and 4.00');
+  if (!Number.isInteger(row.passing_year) || row.passing_year < 2000 || row.passing_year > 2100) errors.push('passing year must be between 2000 and 2100');
+  if (row.batch_year != null && (!Number.isInteger(row.batch_year) || row.batch_year < 1990 || row.batch_year > 2100)) errors.push('batch year is invalid');
+  return { ...row, errors };
+}
 
-// @desc    Approve a registration request
-// @route   PUT /api/admin/registration-requests/:id/approve
-// @access  Private (Admin)
-export const approveRequest = async (req, res) => {
-  try {
-    const { id } = req.params;
+async function parseRoster(file) {
+  if (!file) fail('Select a CSV or XLSX roster file.');
+  if (file.originalname.toLowerCase().endsWith('.csv')) return new Promise((resolve, reject) => {
+    const rows = [];
+    Readable.from(file.buffer.toString('utf8').replace(/^\uFEFF/, '')).pipe(csv({ mapHeaders: ({ header }) => header.trim().toLowerCase() })).on('data', (row) => rows.push(row)).on('error', reject).on('end', () => resolve(rows));
+  });
+  const workbook = new ExcelJS.Workbook(); await workbook.xlsx.load(file.buffer);
+  const sheet = workbook.worksheets[0]; if (!sheet) return [];
+  const headers = []; sheet.getRow(1).eachCell((cell, column) => { headers[column] = clean(cell.text).toLowerCase(); });
+  const rows = []; sheet.eachRow((source, index) => { if (index === 1) return; const row = {}; headers.forEach((header, column) => { if (header) row[header] = source.getCell(column).text; }); if (Object.values(row).some(clean)) rows.push(row); }); return rows;
+}
 
-    const request = await withDbRetry(() =>
-      prisma.registrationRequest.findUnique({
-        where: { request_id: Number(id) },
-        include: { eligibleStudent: true },
-      })
-    );
+async function validateRoster(file) {
+  const source = await parseRoster(file); if (source.length > 5000) fail('A roster may contain at most 5,000 rows.');
+  const programs = await withDbRetry(() => prisma.academicProgram.findMany({ where: { is_active: true }, select: { program_id: true, code: true } }));
+  const programMap = new Map(programs.map((item) => [item.code.toUpperCase(), item.program_id])); const seen = { registration_no: new Set(), email: new Set(), cnic: new Set() };
+  const rows = source.map((item, index) => { const row = normalizeRoster(item); const errors = [...row.errors]; if (!programMap.has(row.program_code)) errors.push(`unknown program code '${row.program_code || '(blank)'}'`); for (const key of Object.keys(seen)) { if (seen[key].has(row[key])) errors.push(`duplicate ${key.replaceAll('_', ' ')} in file`); seen[key].add(row[key]); } return { row: index + 2, ...row, program_id: programMap.get(row.program_code), errors }; });
+  return { rows, valid: rows.filter((row) => !row.errors.length), invalid: rows.filter((row) => row.errors.length) };
+}
 
-    if (!request || request.status !== 'pending') {
-      return res.status(404).json({
-        success: false,
-        message: 'Pending request not found.',
-      });
-    }
+export async function getPendingRequests(req, res) { try { const data = await withDbRetry(() => prisma.registrationRequest.findMany({ where: { status: 'pending' }, include: { eligibleStudent: { include: { program: true } } }, orderBy: { created_at: 'asc' } })); return res.json({ success: true, count: data.length, data }); } catch (error) { return publicError(res, error, 'Failed to retrieve registration requests.'); } }
+export async function approveRequest(req, res) { try {
+  const id = positiveInteger(req.params.id, 'request id'); const request = await withDbRetry(() => prisma.registrationRequest.findUnique({ where: { request_id: id }, include: { eligibleStudent: true } })); if (!request || request.status !== 'pending') fail('Pending request not found.', 404); if (!request.is_otp_verified) fail('Student has not verified OTP yet. Cannot approve.');
+  await withDbRetry(() => prisma.$transaction(async (tx) => { await withDbRetry(() => tx.registrationRequest.update({ where: { request_id: id }, data: { status: 'approved', reviewed_at: new Date() } })); await withDbRetry(() => tx.eligibleStudent.update({ where: { eligible_id: request.eligible_id }, data: { is_registered: true } })); const user = await withDbRetry(() => tx.user.create({ data: { full_name: request.eligibleStudent.full_name, father_name: request.eligibleStudent.father_name, email: request.eligibleStudent.email, password_hash: request.password_hash, role: 'student', registration_no: request.eligibleStudent.registration_no, cnic: request.cnic, phone: request.phone, program_id: request.eligibleStudent.program_id, passing_year: request.eligibleStudent.passing_year, cgpa: request.eligibleStudent.cgpa } })); await withDbRetry(() => tx.notification.create({ data: { user_id: user.user_id, title: 'Account Approved', message: 'Your account has been approved. You can now sign in.' } })); await audit(tx, req, 'STUDENT_REGISTRATION_APPROVED', 'RegistrationRequest', id, `Approved ${request.eligibleStudent.registration_no}.`); }));
+  return res.json({ success: true, message: 'Student account approved and created successfully.' });
+} catch (error) { return publicError(res, error, 'Failed to approve registration request.'); } }
+export async function rejectRequest(req, res) { try { const id = positiveInteger(req.params.id, 'request id'); const remarks = clean(req.body.remarks) || 'Rejected by administration.'; const found = await withDbRetry(() => prisma.registrationRequest.findUnique({ where: { request_id: id } })); if (!found || found.status !== 'pending') fail('Pending request not found.', 404); await withDbRetry(() => prisma.$transaction(async (tx) => { await withDbRetry(() => tx.registrationRequest.update({ where: { request_id: id }, data: { status: 'rejected', admin_remarks: remarks, reviewed_at: new Date() } })); await audit(tx, req, 'STUDENT_REGISTRATION_REJECTED', 'RegistrationRequest', id, remarks); })); return res.json({ success: true, message: 'Registration request rejected.' }); } catch (error) { return publicError(res, error, 'Failed to reject registration request.'); } }
 
-    if (!request.is_otp_verified) {
-      return res.status(400).json({
-        success: false,
-        message: 'Student has not verified OTP yet. Cannot approve.',
-      });
-    }
+export async function uploadEligibleStudents(req, res) { try { const result = await validateRoster(req.file); if (req.query.preview === 'true') return res.json({ success: true, data: { total: result.rows.length, valid: result.valid.length, invalid: result.invalid.length, rows: result.rows } }); if (!result.valid.length) fail('The roster contains no valid rows. Review the validation errors.'); let imported = 0; let skipped = result.invalid.length;
+  await withDbRetry(() => prisma.$transaction(async (tx) => { for (const row of result.valid) { const current = await withDbRetry(() => tx.eligibleStudent.findUnique({ where: { registration_no: row.registration_no }, select: { is_registered: true } })); if (current?.is_registered) { skipped += 1; continue; } const data = { full_name: row.full_name, father_name: row.father_name, email: row.email, cnic: row.cnic, program_id: row.program_id, batch_year: row.batch_year, passing_year: row.passing_year, cgpa: row.cgpa }; await withDbRetry(() => tx.eligibleStudent.upsert({ where: { registration_no: row.registration_no }, update: data, create: { registration_no: row.registration_no, ...data } })); imported += 1; } await audit(tx, req, 'ELIGIBLE_ROSTER_IMPORTED', 'EligibleStudent', null, `Imported or updated ${imported} roster records.`, { imported, skipped, invalid: result.invalid.length }); }));
+  return res.json({ success: true, imported, skipped, errors: result.invalid.map(({ row, errors }) => ({ row, errors })) });
+} catch (error) { return publicError(res, error, 'Failed to process eligible-student roster.'); } }
+export const importEligibleStudents = uploadEligibleStudents;
+export function downloadRosterTemplate(req, res) { return res.set({ 'Content-Type': 'text/csv; charset=utf-8', 'Content-Disposition': 'attachment; filename="sample-eligible-roster.csv"' }).send('registration_no,full_name,father_name,email,cnic,program_code,cgpa,passing_year,batch_year\n2021-SE-105,Sample Student,Sample Parent,student105@university.edu.pk,16101-9876543-1,BSC-SE,3.42,2025,2021\n'); }
 
-    await withDbRetry(() =>
-      prisma.$transaction(async (tx) => {
-        await tx.registrationRequest.update({
-          where: { request_id: request.request_id },
-          data: { status: 'approved', reviewed_at: new Date() },
-        });
+export async function listEligibleStudents(req, res) { try { const { page, limit, skip } = pagination(req.query, 15); const search = clean(req.query.search); const program_id = req.query.program_id ? positiveInteger(req.query.program_id, 'program id') : undefined; const is_registered = req.query.is_registered === 'true' ? true : req.query.is_registered === 'false' ? false : undefined; const where = { ...(program_id && { program_id }), ...(is_registered !== undefined && { is_registered }), ...(search && { OR: [{ registration_no: { contains: search, mode: 'insensitive' } }, { full_name: { contains: search, mode: 'insensitive' } }, { cnic: { contains: search } }] }) }; const [data, total, programs] = await Promise.all([withDbRetry(() => prisma.eligibleStudent.findMany({ where, include: { program: true }, orderBy: { registration_no: 'asc' }, skip, take: limit })), withDbRetry(() => prisma.eligibleStudent.count({ where })), withDbRetry(() => prisma.academicProgram.findMany({ where: { is_active: true }, orderBy: { name: 'asc' } }))]); return res.json({ success: true, data, programs, pagination: { page, limit, total, pages: Math.ceil(total / limit) } }); } catch (error) { return publicError(res, error, 'Failed to load eligible students.'); } }
+async function resolveProgram(code) { const program = await withDbRetry(() => prisma.academicProgram.findUnique({ where: { code: code.toUpperCase() } })); if (!program) fail('Unknown academic program.'); return program; }
+export async function createEligibleStudent(req, res) { try { const input = normalizeRoster(req.body); if (input.errors.length) fail(input.errors.join('; ')); const program = await resolveProgram(input.program_code); const data = await withDbRetry(() => prisma.$transaction(async (tx) => { const row = await withDbRetry(() => tx.eligibleStudent.create({ data: { registration_no: input.registration_no, full_name: input.full_name, father_name: input.father_name, email: input.email, cnic: input.cnic, program_id: program.program_id, cgpa: input.cgpa, passing_year: input.passing_year, batch_year: input.batch_year } })); await audit(tx, req, 'ELIGIBLE_STUDENT_CREATED', 'EligibleStudent', row.eligible_id, `Added ${row.registration_no} to the roster.`); return row; })); return res.status(201).json({ success: true, data }); } catch (error) { if (error.code === 'P2002') return res.status(409).json({ success: false, message: 'Registration number, email, or CNIC already exists.' }); return publicError(res, error, 'Failed to add eligible student.'); } }
+export async function updateEligibleStudent(req, res) { try { const id = positiveInteger(req.params.id, 'eligible student id'); const current = await withDbRetry(() => prisma.eligibleStudent.findUnique({ where: { eligible_id: id }, include: { program: true } })); if (!current) fail('Eligible student not found.', 404); const input = normalizeRoster({ ...current, ...req.body, program_code: req.body.program_code || current.program.code }); if (input.errors.length) fail(input.errors.join('; ')); const program = await resolveProgram(input.program_code); const data = await withDbRetry(() => prisma.$transaction(async (tx) => { const row = await withDbRetry(() => tx.eligibleStudent.update({ where: { eligible_id: id }, data: { full_name: input.full_name, father_name: input.father_name, email: input.email, cnic: input.cnic, program_id: program.program_id, cgpa: input.cgpa, passing_year: input.passing_year, batch_year: input.batch_year } })); await audit(tx, req, 'ELIGIBLE_STUDENT_UPDATED', 'EligibleStudent', id, `Updated ${row.registration_no}.`); return row; })); return res.json({ success: true, data }); } catch (error) { return publicError(res, error, 'Failed to update eligible student.'); } }
+export async function deleteEligibleStudent(req, res) { try { const id = positiveInteger(req.params.id, 'eligible student id'); const row = await withDbRetry(() => prisma.eligibleStudent.findUnique({ where: { eligible_id: id } })); if (!row) fail('Eligible student not found.', 404); if (row.is_registered) fail('Student account already active'); await withDbRetry(() => prisma.$transaction(async (tx) => { await audit(tx, req, 'ELIGIBLE_STUDENT_DELETED', 'EligibleStudent', id, `Removed ${row.registration_no} from the roster.`); await withDbRetry(() => tx.eligibleStudent.delete({ where: { eligible_id: id } })); })); return res.json({ success: true, message: 'Eligible student removed.' }); } catch (error) { return publicError(res, error, 'Failed to remove eligible student.'); } }
 
-        await tx.eligibleStudent.update({
-          where: { eligible_id: request.eligible_id },
-          data: { is_registered: true },
-        });
+export async function getAdminDashboard(req, res) { try { const [eligible, registered, active, completed, ready, departments, recent] = await Promise.all([withDbRetry(() => prisma.eligibleStudent.count()), withDbRetry(() => prisma.eligibleStudent.count({ where: { is_registered: true } })), withDbRetry(() => prisma.clearanceRequest.count({ where: { status: { in: ['applied', 'in_progress', 'correction_required'] } } })), withDbRetry(() => prisma.clearanceRequest.count({ where: { status: 'completed' } })), withDbRetry(() => prisma.degreeApplication.count({ where: { status: { in: ['degree_ready', 'degree_collected', 'completed'] } } })), withDbRetry(() => prisma.department.findMany({ include: { departmentReviews: { select: { status: true, reviewed_at: true, clearanceRequest: { select: { submitted_at: true } } } } }, orderBy: { name: 'asc' } })), withDbRetry(() => prisma.activityLog.findMany({ take: 10, orderBy: { created_at: 'desc' }, include: { user: { select: { full_name: true, role: true } } } }))]); const bottlenecks = departments.map((item) => { const finished = item.departmentReviews.filter((r) => r.reviewed_at && r.clearanceRequest.submitted_at); return { department_id: item.department_id, name: item.name, code: item.code, pending: item.departmentReviews.filter((r) => r.status === 'pending').length, corrections: item.departmentReviews.filter((r) => ['rejected', 'correction_required'].includes(r.status)).length, average_hours: finished.length ? Math.round(finished.reduce((sum, r) => sum + (r.reviewed_at - r.clearanceRequest.submitted_at) / 36e5, 0) / finished.length) : 0 }; }).sort((a, b) => b.pending + b.corrections - a.pending - a.corrections); return res.json({ success: true, data: { metrics: { eligible, registered, pending_registration: eligible - registered, active_clearances: active, completed_clearances: completed, completion_rate: active + completed ? Math.round(completed * 100 / (active + completed)) : 0, degrees_ready_or_issued: ready }, bottlenecks, recent } }); } catch (error) { return publicError(res, error, 'Failed to load administration dashboard.'); } }
 
-        const user = await tx.user.create({
-          data: {
-            full_name: request.eligibleStudent.full_name,
-            email: request.eligibleStudent.email,
-            password_hash: request.password_hash,
-            role: 'student',
-            registration_no: request.eligibleStudent.registration_no,
-            cnic: request.cnic,
-            phone: request.phone,
-            program_id: request.eligibleStudent.program_id,
-          },
-        });
+export async function listDepartments(req, res) { try { const data = await withDbRetry(() => prisma.department.findMany({ include: { users: { where: { role: 'officer', is_active: true }, select: { user_id: true, full_name: true, email: true } }, _count: { select: { departmentReviews: true } } }, orderBy: { name: 'asc' } })); return res.json({ success: true, data }); } catch (error) { return publicError(res, error, 'Failed to load departments.'); } }
+export async function createDepartment(req, res) { try { const name = clean(req.body.name); const code = clean(req.body.code).toUpperCase(); if (!name || !/^[A-Z0-9-]{2,10}$/.test(code)) fail('Provide a name and a 2-10 character department code.'); const data = await withDbRetry(() => prisma.$transaction(async (tx) => { const row = await withDbRetry(() => tx.department.create({ data: { name, code } })); await audit(tx, req, 'DEPARTMENT_CREATED', 'Department', row.department_id, `Created ${name} (${code}).`); return row; })); return res.status(201).json({ success: true, data }); } catch (error) { return publicError(res, error, 'Failed to create department.'); } }
+export async function toggleDepartment(req, res) { try { const id = positiveInteger(req.params.id, 'department id'); if (typeof req.body.is_active !== 'boolean') fail('is_active must be boolean.'); const data = await withDbRetry(() => prisma.$transaction(async (tx) => { const row = await withDbRetry(() => tx.department.update({ where: { department_id: id }, data: { is_active: req.body.is_active } })); await audit(tx, req, row.is_active ? 'DEPARTMENT_ACTIVATED' : 'DEPARTMENT_DEACTIVATED', 'Department', id, `${row.name} is now ${row.is_active ? 'active' : 'inactive'}.`); return row; })); return res.json({ success: true, data }); } catch (error) { return publicError(res, error, 'Failed to update department.'); } }
 
-        await tx.notification.create({
-          data: {
-            user_id: user.user_id,
-            title: 'Account Approved',
-            message: 'Your account has been approved by the Admin. You can now login.',
-          },
-        });
-      })
-    );
+export async function listUsers(req, res) { try { const { page, limit, skip } = pagination(req.query, 15); const role = clean(req.query.role); const search = clean(req.query.search); const where = { ...(role && role !== 'all' && { role }), ...(search && { OR: [{ full_name: { contains: search, mode: 'insensitive' } }, { email: { contains: search, mode: 'insensitive' } }, { registration_no: { contains: search, mode: 'insensitive' } }] }) }; const [data, total, departments] = await Promise.all([withDbRetry(() => prisma.user.findMany({ where, include: { department: true, program: true }, orderBy: { created_at: 'desc' }, skip, take: limit })), withDbRetry(() => prisma.user.count({ where })), withDbRetry(() => prisma.department.findMany({ where: { is_active: true }, orderBy: { name: 'asc' } }))]); return res.json({ success: true, data, departments, pagination: { page, limit, total, pages: Math.ceil(total / limit) } }); } catch (error) { return publicError(res, error, 'Failed to load users.'); } }
+export async function createStaff(req, res) { try { const full_name = clean(req.body.full_name); const email = clean(req.body.email).toLowerCase(); const password = clean(req.body.password); const role = clean(req.body.role); const department_id = req.body.department_id ? positiveInteger(req.body.department_id, 'department id') : null; if (!full_name || !EMAIL.test(email) || !STAFF_ROLES.has(role) || !/^(?=.*[A-Za-z])(?=.*\d).{8,}$/.test(password)) fail('Provide valid staff details and an 8+ character password containing letters and numbers.'); if (role === 'officer' && !department_id) fail('An officer must be assigned to a department.'); const password_hash = await hashPassword(password); const data = await withDbRetry(() => prisma.$transaction(async (tx) => { const row = await withDbRetry(() => tx.user.create({ data: { full_name, email, password_hash, role, department_id: role === 'officer' ? department_id : null }, select: { user_id: true, full_name: true, email: true, role: true, is_active: true } })); await audit(tx, req, 'STAFF_ACCOUNT_CREATED', 'User', row.user_id, `Provisioned ${role} account for ${email}.`); return row; })); return res.status(201).json({ success: true, data }); } catch (error) { return publicError(res, error, 'Failed to create staff account.'); } }
+export async function setUserStatus(req, res) { try { const id = positiveInteger(req.params.id, 'user id'); if (id === req.user.user_id && req.body.is_active === false) fail('You cannot suspend your own account.'); if (typeof req.body.is_active !== 'boolean') fail('is_active must be boolean.'); const data = await withDbRetry(() => prisma.$transaction(async (tx) => { const row = await withDbRetry(() => tx.user.update({ where: { user_id: id }, data: { is_active: req.body.is_active }, select: { user_id: true, full_name: true, is_active: true } })); await audit(tx, req, row.is_active ? 'USER_ACTIVATED' : 'USER_SUSPENDED', 'User', id, `${row.full_name} was ${row.is_active ? 'activated' : 'suspended'}.`); return row; })); return res.json({ success: true, data }); } catch (error) { return publicError(res, error, 'Failed to update account status.'); } }
+export async function resetUserPassword(req, res) { try { const id = positiveInteger(req.params.id, 'user id'); const password = clean(req.body.password); if (!/^(?=.*[A-Za-z])(?=.*\d).{8,}$/.test(password)) fail('Password must be at least 8 characters and contain letters and numbers.'); const password_hash = await hashPassword(password); await withDbRetry(() => prisma.$transaction(async (tx) => { await withDbRetry(() => tx.user.update({ where: { user_id: id }, data: { password_hash, auth_version: { increment: 1 } } })); await audit(tx, req, 'STAFF_PASSWORD_RESET', 'User', id, 'Administrator reset an account password and invalidated existing sessions.'); })); return res.json({ success: true, message: 'Password reset successfully. Existing sessions were signed out.' }); } catch (error) { return publicError(res, error, 'Failed to reset password.'); } }
 
-    res.status(200).json({
-      success: true,
-      message: 'Student account approved and created successfully.',
-    });
-  } catch (error) {
-    res.status(500).json({ success: false, message: error.message });
-  }
-};
-
-// @desc    Reject a registration request
-// @route   PUT /api/admin/registration-requests/:id/reject
-// @access  Private (Admin)
-export const rejectRequest = async (req, res) => {
-  try {
-    const { id } = req.params;
-    const { remarks } = req.body;
-
-    const request = await withDbRetry(() =>
-      prisma.registrationRequest.findUnique({ where: { request_id: Number(id) } })
-    );
-
-    if (!request || request.status !== 'pending') {
-      return res.status(404).json({ success: false, message: 'Pending request not found.' });
-    }
-
-    await withDbRetry(() =>
-      prisma.registrationRequest.update({
-        where: { request_id: Number(id) },
-        data: {
-          status: 'rejected',
-          admin_remarks: remarks || 'Rejected by administration.',
-          reviewed_at: new Date(),
-        },
-      })
-    );
-
-    res.status(200).json({ success: true, message: 'Registration request rejected.' });
-  } catch (error) {
-    res.status(500).json({ success: false, message: error.message });
-  }
-};
-
-// @desc    Admin uploads CSV of eligible graduating students
-// @route   POST /api/admin/import-eligible-students
-// @access  Private (Admin)
-export const importEligibleStudents = async (req, res) => {
-  try {
-    if (!req.file) {
-      return res.status(400).json({
-        success: false,
-        message: 'Please upload a CSV file.',
-      });
-    }
-
-    const results = [];
-    const stream = Readable.from(req.file.buffer.toString());
-
-    stream
-      .pipe(csv())
-      .on('data', (data) => results.push(data))
-      .on('end', async () => {
-        let importedCount = 0;
-
-        for (const row of results) {
-          const regNo = row.registration_no?.trim();
-          const email = row.email?.trim().toLowerCase();
-          const fullName = row.full_name?.trim();
-          const programCode = row.program_code?.trim();
-          const batchYear = row.batch_year ? parseInt(row.batch_year) : null;
-
-          if (!regNo || !email || !fullName || !programCode) continue;
-
-          const program = await withDbRetry(() =>
-            prisma.academicProgram.findUnique({
-              where: { code: programCode },
-            })
-          );
-
-          if (!program) continue;
-
-          await withDbRetry(() =>
-            prisma.eligibleStudent.upsert({
-              where: { registration_no: regNo },
-              update: {
-                email,
-                full_name: fullName,
-                program_id: program.program_id,
-                batch_year: batchYear,
-                is_registered: false,
-              },
-              create: {
-                registration_no: regNo,
-                email,
-                full_name: fullName,
-                program_id: program.program_id,
-                batch_year: batchYear,
-              },
-            })
-          );
-
-          importedCount++;
-        }
-
-        res.status(200).json({
-          success: true,
-          message: `CSV import completed successfully. ${importedCount} eligible students loaded.`,
-        });
-      });
-  } catch (error) {
-    res.status(500).json({ success: false, message: error.message });
-  }
-};
+export async function listAuditLogs(req, res) { try { const { page, limit, skip } = pagination(req.query, 20); const search = clean(req.query.search); const where = search ? { OR: [{ action: { contains: search, mode: 'insensitive' } }, { entity_type: { contains: search, mode: 'insensitive' } }, { description: { contains: search, mode: 'insensitive' } }, { user: { full_name: { contains: search, mode: 'insensitive' } } }] } : {}; const [data, total] = await Promise.all([withDbRetry(() => prisma.activityLog.findMany({ where, include: { user: { select: { full_name: true, email: true, role: true } } }, orderBy: { created_at: 'desc' }, skip, take: limit })), withDbRetry(() => prisma.activityLog.count({ where }))]); return res.json({ success: true, data, pagination: { page, limit, total, pages: Math.ceil(total / limit) } }); } catch (error) { return publicError(res, error, 'Failed to load audit logs.'); } }
+export async function exportAuditLogs(req, res) { try { const rows = await withDbRetry(() => prisma.activityLog.findMany({ include: { user: { select: { full_name: true, email: true, role: true } } }, orderBy: { created_at: 'desc' }, take: 10000 })); const quote = (value) => `"${String(value ?? '').replaceAll('"', '""')}"`; const output = ['timestamp,user,email,role,action,entity_type,entity_id,ip_address,description', ...rows.map((row) => [row.created_at.toISOString(), row.user?.full_name, row.user?.email, row.user?.role, row.action, row.entity_type, row.entity_id, row.ip_address, row.description].map(quote).join(','))].join('\n'); return res.set({ 'Content-Type': 'text/csv; charset=utf-8', 'Content-Disposition': 'attachment; filename="uet-audit-log.csv"' }).send(output); } catch (error) { return publicError(res, error, 'Failed to export audit logs.'); } }

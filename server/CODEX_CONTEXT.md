@@ -1,12 +1,12 @@
-# PROJECT CONTEXT: UET Mardan AI Degree & Clearance Management System
+# PROJECT CONTEXT: GradFlow AI Degree & Clearance Management System
 
 ## 1. Project Overview & Tech Stack
-- **System**: AI-Powered Degree Issuance & Clearance Management System for UET Mardan (FYP).
+- **System**: AI-Powered Degree Issuance & Clearance Management System for GradFlow (FYP).
 - **Backend**: Node.js (ES Modules, `"type": "module"`), Express.js, Prisma ORM v6.19.3.
 - **Database**: Neon Serverless PostgreSQL with pgvector extension.
 - **Frontend**: React + Vite + Tailwind CSS v4.
 - **Authentication**: JWT Bearer tokens + bcryptjs (Salt rounds: 10) + RBAC (`student`, `officer`, `controller`, `admin`).
-- **File Uploads**: Multer (saved to `server/uploads/`, served via `/uploads/` static route).
+- **Private Files**: Multer memory ingestion with signature validation; documents and generated PDFs are stored under ignored `server/private-uploads/` and served only by authenticated, owner-scoped routes.
 - **AI Engine (M06 implemented; provider verification pending)**: Groq (`groq-sdk`, `GROQ_MODEL=llama-3.1-8b-instant`) + Hugging Face hosted `sentence-transformers/all-MiniLM-L6-v2` embeddings (384 dimensions) + pgvector search over `KnowledgeBase`. No local embedding model is loaded. See `../docs/MILESTONE_06.md` for setup and verification.
 
 ---
@@ -43,14 +43,14 @@
 
 ## 3. Database Models & Schema Summary (Prisma)
 
-- **User**: `user_id`, `full_name`, `email`, `password_hash`, `role` (student | officer | controller | admin), `department_id`, `program_id`, `phone_number`, `is_active`.
+- **User**: identity, father name, email, CNIC, phone, academic program, passing year, CGPA, role and activation fields.
 - **Department**: `department_id`, `name`, `code` (ADM, ACC, LIB, HST, STR, TRN, FYP, CLO), `is_active`.
 - **AcademicProgram**: `program_id`, `name`, `code`, `degree_title`, `duration_years`.
 - **EligibleStudent**: `eligible_id`, `registration_no`, `full_name`, `cnic`, `program_id`, `cgpa`, `passing_year`, `is_registered`.
 - **RegistrationRequest**: `request_id`, `full_name`, `email`, `registration_no`, `cnic`, `otp_code`, `otp_expires_at`, `is_verified`.
 - **ClearanceRequest**: `clearance_id`, `student_id`, `status` (draft | applied | in_progress | correction_required | completed), `certificate_url`, `completed_at`.
-- **DepartmentReview**: `review_id`, `clearance_id`, `department_id`, `reviewer_id`, `status` (pending | approved | rejected | correction_required | not_applicable), `remarks`, `reviewed_at`. Composite unique: `[clearance_id, department_id]`.
-- **DegreeApplication**: `degree_app_id`, `clearance_id` (Unique 1:1), `student_id`, `status` (application_started | documents_uploaded | controller_review | degree_processing | degree_ready | degree_collected | completed), `collection_date`, `ready_at`, `collected_at`.
+- **DepartmentReview**: departmental status, officer remarks, student correction response, resubmission timestamp and write-lock metadata. Composite unique: `[clearance_id, department_id]`.
+- **DegreeApplication**: unique clearance relation, seven-stage status, Bank of Khyber fee/verification slip numbers, deposit date and processing timestamps.
 - **Document**: `document_id`, `degree_app_id`, `document_type` (CNIC, PHOTO, SSC_DMC, SSC_CERT, HSSC_DMC, HSSC_CERT, FEE_SLIP, VERIFICATION_SLIP, INTERNSHIP, CLEARANCE_CERT), `file_url`, `file_name`, `verification_status` (pending | verified | rejected), `remarks`.
 - **Receipt**: `receipt_id`, `degree_app_id` (Unique 1:1), `receipt_number`, `collection_date`, `qr_code_data`.
 - **Notification**: `notification_id`, `user_id`, `title`, `message`, `type`, `is_read`.
@@ -68,9 +68,9 @@
 - [x] **Milestone 04A**: Clearance Workflow Engine (Dynamic multi-department parallel routing & auto-completion)
 - [x] **Milestone 04B**: Clearance Oversight, Analytics, Audit Logging & Certificate Generation
 - [x] **Milestone 05**: Degree Application Pipeline, Multer Uploads, Controller Review & Collection Receipts
-- [ ] **Milestone 06 (CURRENT TARGET)**: AI RAG Chatbot (Groq + Hugging Face 384-dimensional embeddings + pgvector search over `KnowledgeBase`)
-- [ ] **Milestone 07**: React Frontend Dashboards (Vite + Tailwind CSS v4)
-- [ ] **Milestone 08**: End-to-End Integration, Testing & Final FYP Defense Documentation
+- [x] **Milestone 06**: AI RAG Chatbot (Groq + local 384-dimensional MiniLM embeddings + pgvector search over `KnowledgeBase`)
+- [x] **Milestone 07**: React Frontend Dashboards (Vite + Tailwind CSS v4), student flexibility workflows and role portals
+- [ ] **Milestone 08 (CURRENT TARGET)**: End-to-End Integration, Testing & Final FYP Defense Documentation
 
 ---
 
@@ -99,6 +99,6 @@ server/
 │   ├── scripts/
 │   │   └── force-complete-clearance.js
 │   └── index.js
-├── uploads/                   # Multer storage destination
+├── private-uploads/           # Ignored private documents and generated PDFs
 └── package.json
 ```
